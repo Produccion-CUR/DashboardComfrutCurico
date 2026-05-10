@@ -1,0 +1,35 @@
+name: 🏭 Build Dashboard Curicó
+
+on:
+  push:
+    paths:
+      - 'data/**.xlsx'
+      - 'data/**.xls'
+  workflow_dispatch:    # botón manual en GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install pandas openpyxl xlrd
+
+      - name: Build dashboard
+        run: python build_dashboard.py
+
+      - name: Commit y push
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add docs/dashboard.html
+          git diff --staged --quiet || git commit -m "🔄 Auto-build $(date '+%d/%m/%Y %H:%M')"
+          git push
