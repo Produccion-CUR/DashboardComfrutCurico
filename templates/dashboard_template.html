@@ -1,0 +1,3220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard Producción · Planta Curicó</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0a0f1e;--bg2:#0d1529;
+  --card:rgba(255,255,255,.055);--card-h:rgba(255,255,255,.085);
+  --brd:rgba(255,255,255,.11);
+  --acc:#3b82f6;--acc2:#60a5fa;
+  --grn:#22c55e;--red:#ef4444;--amb:#f59e0b;--pur:#a855f7;--cyn:#06b6d4;--lime:#84cc16;
+  --txt:#eef2ff;--mut:rgba(200,215,255,.52);--dim:rgba(200,215,255,.3);
+  --font:'Inter',system-ui,sans-serif;--mono:'Consolas',monospace;
+  --r:12px;--rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg);color:var(--txt);font-family:var(--font);font-size:13px;min-height:100vh;}
+body{background:radial-gradient(ellipse at 15% 8%,rgba(37,99,235,.16) 0%,transparent 50%),
+  radial-gradient(ellipse at 85% 85%,rgba(34,197,94,.1) 0%,transparent 50%),var(--bg);}
+.nav{position:sticky;top:0;z-index:200;height:52px;
+  background:rgba(10,15,30,.92);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--brd);
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:10px;}
+.nav-logo{width:28px;height:28px;background:linear-gradient(135deg,#16a34a,#059669);
+  border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:11px;color:#fff;flex-shrink:0;}
+.nav-info h1{font-size:13px;font-weight:700;}
+.nav-info p{font-size:10px;color:var(--mut);}
+.tabs{display:flex;gap:2px;background:rgba(255,255,255,.055);
+  border:1px solid var(--brd);border-radius:10px;padding:3px;}
+.tab{padding:5px 14px;border-radius:7px;font-size:12px;font-weight:500;
+  cursor:pointer;color:var(--mut);border:none;background:transparent;
+  font-family:var(--font);transition:all .2s;white-space:nowrap;}
+.tab.on{background:linear-gradient(135deg,rgba(34,197,94,.3),rgba(16,163,74,.2));
+  color:var(--txt);border:1px solid rgba(34,197,94,.38);}
+.tab:hover:not(.on){color:var(--txt);background:rgba(255,255,255,.06);}
+.nav-r{display:flex;align-items:center;gap:8px;}
+.upbtn{background:rgba(255,255,255,.08);border:1px solid var(--brd);color:var(--txt);
+  padding:5px 11px;border-radius:7px;cursor:pointer;font-size:11px;font-family:var(--font);}
+.upbtn:hover{background:rgba(34,197,94,.2);border-color:rgba(34,197,94,.4);}
+#fi{display:none;}
+.scr{display:none;padding:14px 20px 30px;}
+.scr.on{display:block;}
+.fbar-sticky{position:sticky;top:52px;z-index:150;
+  background:rgba(10,15,30,.95);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--brd);padding:0 20px;}
+.fbar-toggle{display:flex;align-items:center;justify-content:space-between;
+  padding:5px 0;cursor:pointer;user-select:none;}
+.ftlbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--grn);}
+.ft-pills{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.fpill{background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.3);
+  color:var(--grn);font-size:10px;padding:2px 8px;border-radius:12px;}
+.farrow{font-size:11px;color:var(--mut);transition:transform .25s;margin-left:10px;}
+.farrow.open{transform:rotate(180deg);}
+.fbar-inner{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;
+  overflow:hidden;transition:max-height .3s,padding .3s,opacity .3s;}
+.fbar-inner.exp{max-height:200px;padding:9px 0;opacity:1;}
+.fbar-inner.col{max-height:0;padding:0;opacity:0;pointer-events:none;}
+.fg{display:flex;flex-direction:column;gap:2px;}
+.fl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--grn);}
+select{background:rgba(255,255,255,.07);border:1px solid var(--brd);color:var(--txt);
+  padding:5px 9px;border-radius:6px;font-size:11px;font-family:var(--font);cursor:pointer;min-width:105px;}
+select option{background:#111827;color:var(--txt);}
+select:focus{outline:none;border-color:var(--grn);}
+.rbtn{background:rgba(255,255,255,.055);border:1px solid var(--brd);color:var(--mut);
+  padding:5px 11px;border-radius:6px;cursor:pointer;font-size:11px;font-family:var(--font);}
+.rbtn:hover{color:var(--txt);border-color:var(--grn);}
+.slbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--mut);margin:14px 0 8px;display:flex;align-items:center;gap:8px;}
+.slbl::after{content:'';flex:1;height:1px;background:var(--brd);}
+.gc{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:13px 15px;}
+.gt{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);margin-bottom:2px;}
+.gs{font-size:9px;color:var(--dim);margin-bottom:10px;}
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin-bottom:12px;}
+.kpi{background:var(--card);border:1px solid var(--brd);border-radius:var(--rs);padding:11px 13px;border-top:2px solid transparent;}
+.kpi.kb{border-top-color:var(--acc);} .kpi.kr{border-top-color:var(--red);}
+.kpi.kg{border-top-color:var(--grn);} .kpi.ka{border-top-color:var(--amb);}
+.kpi.kp{border-top-color:var(--pur);} .kpi.kc{border-top-color:var(--cyn);}
+.kpi.kl{border-top-color:var(--lime);}
+.klbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);margin-bottom:5px;}
+.kval{font-family:var(--mono);font-size:19px;font-weight:700;line-height:1;}
+.kpi.kb .kval{color:var(--acc2);} .kpi.kr .kval{color:var(--red);}
+.kpi.kg .kval{color:var(--grn);} .kpi.ka .kval{color:var(--amb);}
+.kpi.kp .kval{color:var(--pur);} .kpi.kc .kval{color:var(--cyn);}
+.kpi.kl .kval{color:var(--lime);}
+.ksub{font-size:9px;color:var(--dim);margin-top:4px;}
+.kbar{margin-top:7px;height:3px;background:rgba(255,255,255,.09);border-radius:2px;}
+.kbf{height:3px;border-radius:2px;transition:width .5s;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
+.cw{position:relative;width:100%;}
+.h180{height:180px;}.h200{height:200px;}.h220{height:220px;}.h240{height:240px;}.h260{height:260px;}.h280{height:280px;}
+.linegrp{border:1px solid var(--brd);border-radius:var(--r);margin-bottom:10px;overflow:hidden;}
+.lghead{background:rgba(34,197,94,.08);border-bottom:1px solid var(--brd);
+  padding:10px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;}
+.lghead:hover{background:rgba(34,197,94,.14);}
+.lgh-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.lgh-title{font-size:12px;font-weight:700;color:var(--txt);}
+.lgh-stats{font-size:10px;color:var(--mut);margin-left:auto;text-align:right;}
+.lgh-arrow{color:var(--mut);transition:transform .25s;font-size:11px;margin-left:8px;}
+.lghead.open .lgh-arrow{transform:rotate(180deg);}
+.lgbody{padding:0;max-height:0;overflow:hidden;transition:max-height .4s ease,padding .4s;}
+.lgbody.open{padding:14px;max-height:9999px;}
+.lkpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px;margin-bottom:12px;}
+.lk{background:rgba(255,255,255,.04);border:1px solid var(--brd);border-radius:var(--rs);padding:9px 11px;}
+.lklbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:3px;}
+.lkval{font-family:var(--mono);font-size:16px;font-weight:700;}
+.lksub{font-size:9px;color:var(--dim);margin-top:2px;}
+.esp-filter-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.esp-filter-row .fl{color:var(--acc2);}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead th{padding:5px 9px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;color:var(--mut);border-bottom:1px solid var(--brd);background:rgba(255,255,255,.02);}
+tbody tr:hover{background:rgba(255,255,255,.04);}
+tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
+.tbl-outer{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;}
+.tcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px;margin-bottom:12px;}
+.tc{background:rgba(255,255,255,.04);border:1px solid var(--brd);border-radius:var(--rs);
+  padding:9px 12px;border-left:3px solid transparent;}
+.tcln{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:3px;}
+.tccat{font-size:11px;font-weight:700;margin-bottom:2px;}
+.tcmin{font-family:var(--mono);font-size:14px;font-weight:700;}
+.tcsub{font-size:9px;color:var(--dim);margin-top:2px;}
+.tcard{background:var(--card);border:1px solid var(--brd);border-radius:var(--rs);overflow:hidden;}
+.thd{background:rgba(34,197,94,.12);border-bottom:1px solid var(--brd);padding:7px 12px;
+  display:flex;justify-content:space-between;align-items:center;}
+.tht{font-size:10px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.05em;}
+.thc{font-size:10px;color:var(--mut);}
+.dd-bar{display:flex;align-items:center;gap:4px;margin-bottom:8px;}
+.dd-btn{padding:3px 10px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;
+  border:1px solid var(--brd);background:rgba(255,255,255,.06);color:var(--mut);
+  font-family:var(--font);transition:all .15s;}
+.dd-btn.on{background:rgba(59,130,246,.25);border-color:rgba(59,130,246,.5);color:var(--acc2);}
+.dd-btn:hover:not(.on){background:rgba(255,255,255,.1);color:var(--txt);}
+.dd-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--mut);margin-right:4px;}
+.footer{text-align:center;padding:14px;font-size:10px;color:var(--dim);
+  border-top:1px solid var(--brd);margin-top:20px;}
+@media(max-width:750px){.g2,.g3{grid-template-columns:1fr;}.tabs{gap:1px;}.tab{padding:4px 8px;font-size:10px;}}
+
+/* HOME SCREEN */
+.home-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:calc(100vh - 52px);padding:40px 24px;}
+.home-hero{text-align:center;margin-bottom:48px;}
+.home-hero h2{font-size:32px;font-weight:800;margin-bottom:8px;
+  background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text;}
+.home-hero p{font-size:14px;color:var(--mut);}
+.home-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;max-width:900px;width:100%;}
+.home-card{background:var(--card);border:1px solid var(--brd);border-radius:18px;
+  padding:32px 28px;cursor:pointer;transition:all .25s;text-align:left;
+  position:relative;overflow:hidden;}
+.home-card::before{content:'';position:absolute;inset:0;opacity:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.06),transparent);
+  transition:opacity .25s;}
+.home-card:hover{transform:translateY(-5px);border-color:rgba(255,255,255,.25);
+  box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.home-card:hover::before{opacity:1;}
+.home-card-icon{font-size:40px;margin-bottom:16px;display:block;}
+.home-card-title{font-size:18px;font-weight:700;margin-bottom:6px;}
+.home-card-desc{font-size:12px;color:var(--mut);line-height:1.6;margin-bottom:16px;}
+.home-card-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.home-tag{font-size:10px;font-weight:600;padding:3px 9px;border-radius:10px;}
+.home-tag-blue{background:rgba(59,130,246,.2);color:#60a5fa;border:1px solid rgba(59,130,246,.3);}
+.home-tag-green{background:rgba(34,197,94,.2);color:#4ade80;border:1px solid rgba(34,197,94,.3);}
+.home-tag-red{background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.3);}
+.home-tag-amber{background:rgba(245,158,11,.2);color:#fbbf24;border:1px solid rgba(245,158,11,.3);}
+.home-card-arrow{position:absolute;bottom:20px;right:20px;font-size:20px;
+  color:var(--mut);transition:all .25s;}
+.home-card:hover .home-card-arrow{color:var(--txt);transform:translateX(4px);}
+.home-kpi-row{display:flex;gap:24px;margin-top:12px;flex-wrap:wrap;}
+.home-kpi{font-size:11px;color:var(--dim);}
+.home-kpi span{font-family:var(--mono);font-weight:700;color:var(--txt);font-size:13px;}
+.back-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);
+  border:1px solid var(--brd);color:var(--mut);padding:5px 12px;border-radius:8px;
+  cursor:pointer;font-size:11px;font-family:var(--font);transition:all .2s;margin-right:8px;}
+.back-btn:hover{background:rgba(255,255,255,.12);color:var(--txt);}
+@media(max-width:650px){.home-cards{grid-template-columns:1fr;}}
+
+/* TP Dashboard specific */
+.lcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px;margin-bottom:10px;}
+.lc{background:rgba(255,255,255,.04);border:1px solid var(--brd);border-radius:var(--rs);padding:10px 12px;text-align:center;}
+.lcn{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);margin-bottom:4px;}
+.lcp{font-family:var(--mono);font-size:18px;font-weight:700;}
+.lcs{font-size:9px;color:var(--dim);margin-top:3px;}
+.lcsp{font-size:9px;color:var(--dim);margin-top:2px;}
+.lcsgd{font-size:9px;color:var(--dim);margin-top:2px;}
+.lcRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px;margin-bottom:10px;}
+.bdg{font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;
+  text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.bp{background:rgba(99,102,241,.2);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);}
+.bm{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.3);}
+.be{background:rgba(245,158,11,.2);color:#fcd34d;border:1px solid rgba(245,158,11,.3);}
+.bc{background:rgba(34,197,94,.2);color:#86efac;border:1px solid rgba(34,197,94,.3);}
+.bb{background:rgba(59,130,246,.2);color:#93c5fd;border:1px solid rgba(59,130,246,.3);}
+.bl{background:rgba(168,85,247,.2);color:#d8b4fe;border:1px solid rgba(168,85,247,.3);}
+.lgb3{border-top-color:var(--red);}
+.lgb4{border-top-color:var(--amb);}
+
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="nav-logo">CF</div>
+    <div class="nav-info"><h1>Dashboard · Producción</h1><p>Planta Curicó · Temporada 2025–2026</p></div>
+  </div>
+  <div class="tabs" id="mainTabs">
+    <button class="tab" id="tb0" onclick="goTo('s0',this)">🏠</button>
+    <button class="tab on" id="tb2" onclick="goTo('s2',this)">🔵 Selección</button>
+    <button class="tab" id="tb3"    onclick="goTo('s3',this)">📦 Envasado</button>
+    <button class="tab" id="tbtp2"  onclick="goTo('tp2',this)">⏱️ TP Selección</button>
+    <button class="tab" id="tbtp3"  onclick="goTo('tp3',this)">⏱️ TP Envasado</button>
+  </div>
+  <div class="nav-r">
+    <span style="font-size:10px;color:var(--mut)" id="srcLbl">Temporada 25-26</span>
+    <label class="upbtn" for="fi">📂 Cargar Excel</label>
+    <input type="file" id="fi" accept=".xlsx,.xls">
+  </div>
+</nav>
+
+<!-- ═══ HOME ═══ -->
+<div class="scr on" id="s0">
+  <div class="home-screen">
+    <div class="home-hero">
+      <div style="font-size:48px;margin-bottom:12px">🏭</div>
+      <h2>Dashboard Operacional</h2>
+      <p>Planta Curicó · COMFRUT · Temporada 2025–2026</p>
+    </div>
+    <div class="home-cards">
+      <div class="home-card" onclick="goTo('s2',null)" style="border-top:3px solid #3b82f6;">
+        <span class="home-card-icon">🔵</span>
+        <div class="home-card-title">Selección (ZCIQ)</div>
+        <div class="home-card-desc">Análisis de producción en líneas IQF · Rendimiento · Subproductos · Kg ingresados vs aprobados por especie y línea</div>
+        <div class="home-kpi-row">
+          <div class="home-kpi">Kg Ingresados<br><span id="hKgIn">—</span></div>
+          <div class="home-kpi">Rend. IQF<br><span id="hRend">—</span></div>
+          <div class="home-kpi">Especies<br><span id="hEsp">—</span></div>
+        </div>
+        <div class="home-card-tags" style="margin-top:12px;">
+          <span class="home-tag home-tag-blue">Rendimiento IQF</span>
+          <span class="home-tag home-tag-green">Subproductos</span>
+          <span class="home-tag home-tag-blue">Drill-down</span>
+        </div>
+        <div class="home-card-arrow">→</div>
+      </div>
+
+      <div class="home-card" onclick="goTo('s3',null)" style="border-top:3px solid #06b6d4;">
+        <span class="home-card-icon">📦</span>
+        <div class="home-card-title">Envasado (ZENV)</div>
+        <div class="home-card-desc">Cajas producidas vs programadas · BPM · Mermas de cajas y bolsas · Cumplimiento del programa por SKU</div>
+        <div class="home-kpi-row">
+          <div class="home-kpi">Ton. Reales<br><span id="hTon">—</span></div>
+          <div class="home-kpi">Cumplimiento<br><span id="hCump">—</span></div>
+          <div class="home-kpi">SKUs<br><span id="hSku">—</span></div>
+        </div>
+        <div class="home-card-tags" style="margin-top:12px;">
+          <span class="home-tag home-tag-amber">B/Min</span>
+          <span class="home-tag home-tag-red">Mermas</span>
+          <span class="home-tag home-tag-green">Cumplimiento</span>
+        </div>
+        <div class="home-card-arrow">→</div>
+      </div>
+
+      <div class="home-card" onclick="goTo('tp2',null)" style="border-top:3px solid #ef4444;">
+        <span class="home-card-icon">⏱️</span>
+        <div class="home-card-title">Tiempos Perdidos — Selección</div>
+        <div class="home-card-desc">OEE · Disponibilidad por línea · Top causas planificadas y no planificadas · Paretos y tendencias</div>
+        <div class="home-kpi-row">
+          <div class="home-kpi">T. Perdido<br><span id="hTpPerd">—</span></div>
+          <div class="home-kpi">Disponibilidad<br><span id="hTpDisp">—</span></div>
+          <div class="home-kpi">Eventos<br><span id="hTpEv">—</span></div>
+        </div>
+        <div class="home-card-tags" style="margin-top:12px;">
+          <span class="home-tag home-tag-red">No Planificado</span>
+          <span class="home-tag home-tag-green">Disponibilidad</span>
+          <span class="home-tag home-tag-blue">MTTR / MTBF</span>
+        </div>
+        <div class="home-card-arrow">→</div>
+      </div>
+
+      <div class="home-card" onclick="goTo('tp3',null)" style="border-top:3px solid #a855f7;">
+        <span class="home-card-icon">📦⏱️</span>
+        <div class="home-card-title">Tiempos Perdidos — Envasado</div>
+        <div class="home-card-desc">OEE envasado · Paros planificados y no planificados · Análisis de causas por turno y categoría</div>
+        <div class="home-kpi-row">
+          <div class="home-kpi">T. Perdido<br><span id="hTpPerd3">—</span></div>
+          <div class="home-kpi">Disponibilidad<br><span id="hTpDisp3">—</span></div>
+          <div class="home-kpi">Eventos<br><span id="hTpEv3">—</span></div>
+        </div>
+        <div class="home-card-tags" style="margin-top:12px;">
+          <span class="home-tag home-tag-red">Paros</span>
+          <span class="home-tag home-tag-amber">Categorías</span>
+          <span class="home-tag home-tag-blue">Drill-down</span>
+        </div>
+        <div class="home-card-arrow">→</div>
+      </div>
+    </div>
+    <div style="margin-top:24px;font-size:11px;color:var(--dim);">
+      Temporada 25-26 · <span id="hDate"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SELECCIÓN ═══ -->
+<div class="scr" id="s2">
+  <div class="fbar-sticky">
+    <div class="fbar-toggle" onclick="tfbar('s2')">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--acc)"></div>
+        <span class="ftlbl">🔵 Selección ZCIQ</span>
+        <div class="ft-pills" id="pills2"></div>
+      </div>
+      <span class="farrow open" id="farr2">▼</span>
+    </div>
+    <div class="fbar-inner exp" id="fi2">
+      <div class="fg"><div class="fl">Año</div><select id="s2A"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Mes</div><select id="s2M"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Semana</div><select id="s2S"><option value="">Todas</option></select></div>
+      <div class="fg"><div class="fl">Día</div><select id="s2D"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Turno</div>
+        <select id="s2Tu"><option value="">Todos</option><option value="1">T1</option><option value="2">T2</option><option value="3">T3</option></select></div>
+      <div class="fg"><div class="fl">Línea</div><select id="s2L"><option value="">Todas</option></select></div>
+      <div class="fg"><div class="fl">Especie</div><select id="s2Esp"><option value="">Todas</option></select></div>
+      <button class="rbtn" onclick="resetArea('s2')">↺ Limpiar</button>
+    </div>
+  </div>
+
+  <div class="slbl" style="margin-top:14px;">KPIs — Selección</div>
+  <div class="krow" id="s2Kpis"></div>
+
+  <div class="g2">
+    <div class="gc">
+      <div class="gt">🍓 Distribución por Especie — Kg Ingresados</div>
+      <div class="gs">Proporción de materia prima procesada por fruta</div>
+      <div class="cw h240"><canvas id="s2EspDon"></canvas></div>
+    </div>
+    <div class="gc">
+      <div class="gt">👥 Kg/Hora/Persona — Diario</div>
+      <div class="gs">Productividad laboral diaria</div>
+      <div id="dd_s2KghpD" style="display:flex;flex-direction:column;height:100%;"><div class="cw h240"><canvas id="s2KghpD"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="gc">
+      <div class="gt">🔬 Subproductos — Pure · Jugo · Crumble — Diario</div>
+      <div class="gs">Kg de subproductos generados en selección IQF</div>
+      <div id="dd_s2SubProd" style="display:flex;flex-direction:column;height:100%;"><div class="cw h220"><canvas id="s2SubProd"></canvas></div></div>
+    </div>
+    <div class="gc">
+      <div class="gt">📊 Rendimiento IQF % por Especie — Diario</div>
+      <div class="gs">Línea por especie · área rellena · meta 85%</div>
+      <div id="dd_s2RendLinea" style="display:flex;flex-direction:column;height:100%;"><div class="cw h220"><canvas id="s2RendLinea"></canvas></div></div>
+    </div>
+  </div>
+  <div class="slbl">Análisis por Especie (click para expandir)</div>
+  <div id="s2Lines"></div>
+
+  <div class="slbl">Top 3 Días — por Especie</div>
+  <div class="tbl-outer" id="s2Tbls"></div>
+</div>
+
+<!-- ═══ ENVASADO ═══ -->
+<div class="scr" id="s3">
+  <div class="fbar-sticky">
+    <div class="fbar-toggle" onclick="tfbar('s3')">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--cyn)"></div>
+        <span class="ftlbl">📦 Envasado ZENV</span>
+        <div class="ft-pills" id="pills3"></div>
+      </div>
+      <span class="farrow open" id="farr3">▼</span>
+    </div>
+    <div class="fbar-inner exp" id="fi3">
+      <div class="fg"><div class="fl">Año</div><select id="s3A"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Mes</div><select id="s3M"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Semana</div><select id="s3S"><option value="">Todas</option></select></div>
+      <div class="fg"><div class="fl">Día</div><select id="s3D"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Turno</div>
+        <select id="s3Tu"><option value="">Todos</option><option value="1">T1</option><option value="2">T2</option><option value="3">T3</option></select></div>
+      <div class="fg"><div class="fl">Especie</div><select id="s3Esp"><option value="">Todas</option></select></div>
+      <button class="rbtn" onclick="resetArea('s3')">↺ Limpiar</button>
+    </div>
+  </div>
+
+  <div class="slbl" style="margin-top:14px;">KPIs — Envasado</div>
+  <div class="krow" id="s3Kpis"></div>
+
+  <!-- Row 1: Cajas producidas vs programadas (full width) -->
+  <div class="gc" style="margin-bottom:12px;">
+    <div class="gt">📦 Cajas Producidas vs Programadas — Diario</div>
+    <div class="gs">Azul = producidas · Naranja = programadas · Línea verde = % cumplimiento</div>
+    <div class="cw h240"><div id="dd_s3CajasMes" style="display:flex;flex-direction:column;height:100%;"><canvas id="s3CajasMes"></canvas></div></div>
+  </div>
+
+  <!-- Row 2: Toneladas + Donut -->
+  <div class="g2">
+    <div class="gc">
+      <div class="gt">⚖️ Toneladas Reales — por Mes</div>
+      <div class="gs">Producción en toneladas acumuladas</div>
+      <div id="dd_s3TonMes" style="display:flex;flex-direction:column;height:100%;"><div class="cw h220"><canvas id="s3TonMes"></canvas></div></div>
+    </div>
+    <div class="gc">
+      <div class="gt">🍓 Distribución por Especie — Cajas</div>
+      <div class="gs">Proporción de cajas por tipo de fruta</div>
+      <div class="cw h220"><canvas id="s3EspDon"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Row 4: Merma Cajas + Merma Bolsas -->
+  <div class="g2">
+    <div class="gc">
+      <div class="gt">📦 Merma Cajas % — Diario</div>
+      <div class="gs">Consumo − Teórico Cajas · % por día</div>
+      <div id="dd_s3MermaCajD" style="display:flex;flex-direction:column;height:100%;"><div class="cw h220"><canvas id="s3MermaCajD"></canvas></div></div>
+    </div>
+    <div class="gc">
+      <div class="gt">🛍️ Merma Bolsas % — Diario</div>
+      <div class="gs">Consumo − Teórico Bolsas · % por día</div>
+      <div id="dd_s3MermaBolD" style="display:flex;flex-direction:column;height:100%;"><div class="cw h220"><canvas id="s3MermaBolD"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Row 5: Rendimiento IQF (full width) -->
+  <div class="gc" style="margin-bottom:12px;">
+    <div class="gt">📈 Rendimiento IQF % — Diario</div>
+    <div class="gs">Kg Aprobados ÷ Kg Ingresados × 100 · por día · Meta ≥ 95%</div>
+    <div id="dd_s3RendD" style="display:flex;flex-direction:column;height:100%;"><div class="cw h220"><canvas id="s3RendD"></canvas></div></div>
+  </div>
+
+  <div class="slbl">Análisis por Línea (click para expandir)</div>
+  <div id="s3Lines"></div>
+
+  <!-- SKU ANALYSIS - ONLY IN ENVASADO -->
+  <div class="slbl">Análisis por SKU — Envasado</div>
+  <div class="gc" style="margin-bottom:12px;">
+    <div class="esp-filter-row">
+      <div class="fg"><div class="fl">Filtrar por Especie</div>
+        <select id="s3SkuEsp" onchange="buildSkuCharts()"><option value="">Todas</option></select></div>
+    </div>
+    <div class="g2">
+      <div>
+        <div class="gt">🏷️ Top 15 SKUs — Toneladas</div>
+        <div class="cw h280"><canvas id="s3SkuBar"></canvas></div>
+      </div>
+      <div>
+        <div class="gt">📦 Top 15 SKUs — Cajas</div>
+        <div class="cw h280"><canvas id="s3SkuCajas"></canvas></div>
+      </div>
+    </div>
+    <div class="g2" style="margin-top:12px;">
+      <div>
+        <div class="gt">📦 Merma Cajas por SKU</div>
+        <div class="gs">Unidades excedentes vs teórico · Top 15</div>
+        <div class="cw h280"><canvas id="s3SkuMCaj"></canvas></div>
+      </div>
+      <div>
+        <div class="gt">🛍️ Merma Bolsas por SKU</div>
+        <div class="gs">Bolsas excedentes vs teórico · Top 15</div>
+        <div class="cw h280"><canvas id="s3SkuMBol"></canvas></div>
+      </div>
+    </div>
+    <div id="s3SkuTable" style="overflow-x:auto;margin-top:10px;"></div>
+  </div>
+
+  <div class="slbl">Top 3 Días — Envasado</div>
+  <div class="tbl-outer" id="s3Tbls"></div>
+</div>
+
+<div class="scr" id="tp2">
+  <div class="fbar-sticky" id="fbarStickyTP2">
+    <div class="fbar-toggle" onclick="toggleFbar('tp2')">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="lgh-dot" style="background:var(--acc);width:8px;height:8px;border-radius:50%;"></div>
+        <span class="fbar-toggle-lbl">🔵 Selección ZCIQ — Filtros</span>
+        <div class="fbar-toggle-pills" id="fbarPillsTP2"></div>
+      </div>
+      <span class="fbar-toggle-arrow open" id="fbarArrow2">▼</span>
+    </div>
+    <div class="fbar-inner expanded" id="fbarInner2">
+      <div class="fg"><div class="fl">Año</div><select id="tp2A"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Mes</div><select id="tp2M"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Semana N°</div><select id="tp2S"><option value="">Todas</option></select></div>
+      <div class="fg"><div class="fl">Día</div><select id="tp2D"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Tipo Paro</div>
+        <select id="tp2T">
+          <option value="">Plan. + No Plan.</option>
+          <option value="Paro Planificado">Solo Planificado</option>
+          <option value="Paro No Planificado">Solo No Planificado</option>
+        </select></div>
+      <div class="fg"><div class="fl">Turno</div>
+        <select id="tp2Tu"><option value="">Todos</option><option value="1">T1</option><option value="2">T2</option><option value="3">T3</option></select></div>
+      <button class="rbtn" onclick="resetAreaTP('tp2')">↺ Limpiar</button>
+    </div>
+  </div>
+
+  <div class="slbl" style="margin-top:14px;">KPIs — Selección</div>
+  <div class="krow" id="tp2Kpis"></div>
+
+  <div class="slbl">Disponibilidad por Línea</div>
+  <div class="lcgrid" id="tp2LC"></div>
+
+  <div class="slbl">Categoría No Planif. Dominante por Línea</div>
+  <div class="tcgrid" id="tp2TC"></div>
+
+  <!-- GLOBAL CHARTS FOR THIS AREA -->
+  <div class="g2">
+    <div class="gc">
+      <div class="gt">🥧 Distribución por Categoría — Todas las Líneas</div>
+      <div class="gs">% visible en cada sector · leyenda en blanco</div>
+      <div class="cw h220"><div id="dd_s2Don" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp2Don" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp2Don"></canvas></div></div></div>
+    </div>
+    <div class="gc">
+      <div class="gt">⚡ Planificado vs No Planificado por Línea</div>
+      <div class="gs">Verde = planificado · Rojo = no planificado</div>
+      <div class="cw h220"><div id="dd_s2Stk" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp2Stk" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp2Stk"></canvas></div></div></div>
+    </div>
+  </div>
+
+  <!-- DISP LINE CHART -->
+  <div class="gc" style="margin-bottom:12px;">
+    <div class="gt">📉 Disponibilidad % por Línea y Mes — Comparativo</div>
+    <div class="gs">Disponibilidad diaria por línea · Punto rojo = bajo 85% · Verde = sobre meta</div>
+    <div class="cw h220"><div id="dd_s2DispLine" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp2DispLine" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp2DispLine"></canvas></div></div></div>
+  </div>
+
+
+  <div class="slbl">Top 3 Causas por Mes — Tiempo Planificado vs No Planificado</div>
+  <div class="g2" style="margin-bottom:12px;">
+    <div class="gc">
+      <div class="gt">📅 Top 3 Causas Planificadas por Mes</div>
+      <div class="gs">Las 3 causas con más minutos planificados cada mes · barras apiladas</div>
+      <div class="cw h240"><div id="dd_s2Top3Plan" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp2Top3Plan" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp2Top3Plan"></canvas></div></div></div>
+    </div>
+    <div class="gc">
+      <div class="gt">⚡ Top 3 Causas No Planificadas por Mes</div>
+      <div class="gs">Las 3 causas con más minutos de fallas sorpresa cada mes · barras apiladas</div>
+      <div class="cw h240"><div id="dd_s2Top3NoPlan" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp2Top3NoPlan" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp2Top3NoPlan"></canvas></div></div></div>
+    </div>
+  </div>
+  <div class="slbl">Análisis por Línea — Agrupado (click para expandir)</div>
+  <div id="tp2Lines"></div>
+
+  <div class="slbl">Top 5 Eventos por Línea</div>
+  <div class="tbl-outer" id="tp2Tbls"></div>
+</div>
+
+<!-- SCREEN 3: ENVASADO -->
+
+<div class="scr" id="tp3">
+  <div class="fbar-sticky" id="fbarStickyTP3">
+    <div class="fbar-toggle" onclick="toggleFbar('tp3')">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="lgh-dot" style="background:var(--cyn);width:8px;height:8px;border-radius:50%;"></div>
+        <span class="fbar-toggle-lbl">📦 Envasado ZENV — Filtros</span>
+        <div class="fbar-toggle-pills" id="fbarPillsTP3"></div>
+      </div>
+      <span class="fbar-toggle-arrow open" id="fbarArrow3">▼</span>
+    </div>
+    <div class="fbar-inner expanded" id="fbarInner3">
+      <div class="fg"><div class="fl">Año</div><select id="tp3A"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Mes</div><select id="tp3M"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Semana N°</div><select id="tp3S"><option value="">Todas</option></select></div>
+      <div class="fg"><div class="fl">Día</div><select id="tp3D"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Tipo Paro</div>
+        <select id="tp3T">
+          <option value="">Plan. + No Plan.</option>
+          <option value="Paro Planificado">Solo Planificado</option>
+          <option value="Paro No Planificado">Solo No Planificado</option>
+        </select></div>
+      <div class="fg"><div class="fl">Turno</div>
+        <select id="tp3Tu"><option value="">Todos</option><option value="1">T1</option><option value="2">T2</option><option value="3">T3</option></select></div>
+      <button class="rbtn" onclick="resetAreaTP('tp3')">↺ Limpiar</button>
+    </div>
+  </div>
+
+  <div class="slbl" style="margin-top:14px;">KPIs — Envasado</div>
+  <div class="krow" id="tp3Kpis"></div>
+
+  <div class="slbl">Disponibilidad por Línea</div>
+  <div class="lcgrid" id="tp3LC"></div>
+
+  <div class="slbl">Categoría No Planif. Dominante por Línea</div>
+  <div class="tcgrid" id="tp3TC"></div>
+
+  <div class="g2">
+    <div class="gc">
+      <div class="gt">🥧 Distribución por Categoría — Todas las Líneas</div>
+      <div class="gs">% visible en cada sector · leyenda en blanco</div>
+      <div class="cw h220"><div id="dd_s3Don" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp3Don" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp3Don"></canvas></div></div></div>
+    </div>
+    <div class="gc">
+      <div class="gt">⚡ Planificado vs No Planificado por Línea</div>
+      <div class="cw h220"><div id="dd_s3Stk" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp3Stk" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp3Stk"></canvas></div></div></div>
+    </div>
+  </div>
+
+  <div class="gc" style="margin-bottom:12px;">
+    <div class="gt">📉 Disponibilidad % por Línea y Mes — Comparativo</div>
+    <div class="gs">Disponibilidad diaria por línea · Punto rojo = bajo 85% · Verde = sobre meta</div>
+    <div class="cw h220"><div id="dd_s3DispLine" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp3DispLine" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp3DispLine"></canvas></div></div></div>
+  </div>
+
+
+  <div class="slbl">Top 3 Causas por Mes — Tiempo Planificado vs No Planificado</div>
+  <div class="g2" style="margin-bottom:12px;">
+    <div class="gc">
+      <div class="gt">📅 Top 3 Causas Planificadas por Mes</div>
+      <div class="gs">Las 3 causas con más minutos planificados cada mes · barras apiladas</div>
+      <div class="cw h240"><div id="dd_s3Top3Plan" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp3Top3Plan" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp3Top3Plan"></canvas></div></div></div>
+    </div>
+    <div class="gc">
+      <div class="gt">⚡ Top 3 Causas No Planificadas por Mes</div>
+      <div class="gs">Las 3 causas con más minutos de fallas sorpresa cada mes · barras apiladas</div>
+      <div class="cw h240"><div id="dd_s3Top3NoPlan" style="display:flex;flex-direction:column;height:100%;"><div id="dd_tp3Top3NoPlan" style="display:flex;flex-direction:column;height:100%;"><canvas id="tp3Top3NoPlan"></canvas></div></div></div>
+    </div>
+  </div>
+  <div class="slbl">Análisis por Línea — Agrupado (click para expandir)</div>
+  <div id="tp3Lines"></div>
+
+  <div class="slbl">Top 5 Eventos por Línea</div>
+  <div class="tbl-outer" id="tp3Tbls"></div>
+</div>
+
+
+
+
+<div class="footer">Planta Curicó · COMFRUT · Dashboard Producción · Temporada 2025–2026 · <span id="fDate"></span></div>
+
+<script>
+const PROD_E=/*PROD_DATA*/;
+const PIDX=/*PIDX_DATA*/;
+const PROG_E=/*PROG_DATA*/;
+let PROD=[...PROD_E];
+let PROG=[...PROG_E];
+
+const MESES={1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',7:'Jul',8:'Ago',9:'Sep',10:'Oct',11:'Nov',12:'Dic'};
+const MESES_F={1:'Enero',2:'Febrero',3:'Marzo',4:'Abril',5:'Mayo',6:'Junio',7:'Julio',8:'Agosto',9:'Septiembre',10:'Octubre',11:'Noviembre',12:'Diciembre'};
+const LMAP={S_L01:'Línea 1',S_L03:'Línea 3',S_L04:'Línea 4',S_L05:'Línea 5',S_MANUAL:'Manual',S_LMANCU:'Man.Curicó',S_ENV1:'Envasado 1'};
+const ZCIQ_L=['S_L01','S_L03','S_L04','S_L05','S_LMANCU','S_MANUAL'];
+const ZENV_L=['S_ENV1'];
+const LINE_COLS=['#3b82f6','#22c55e','#a855f7','#f59e0b','#ef4444','#06b6d4','#f97316'];
+const ESP_COLS={FRAMBUESAS:'#ef4444',FRUTILLAS:'#f43f5e',ARANDANOS:'#3b82f6',MORAS:'#7c3aed',UVAS:'#84cc16',CEREZAS:'#f59e0b'};
+const C={red:'#ef4444',amb:'#f59e0b',grn:'#22c55e',blu:'#3b82f6',pur:'#a855f7',cyn:'#06b6d4',grid:'rgba(255,255,255,.07)',txt:'rgba(255,255,255,.8)'};
+let CH={};
+Chart.defaults.color='rgba(200,215,255,0.75)';
+
+const fmt=n=>n==null?'—':Math.round(n).toLocaleString('es-CL');
+const fmtD=n=>n==null?'—':n.toFixed(1);
+const fmtK=n=>n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':fmt(n);
+function sv(id){const e=document.getElementById(id);return e?e.value:'';}
+function el(id){return document.getElementById(id);}
+function dx(id){if(CH[id]){try{CH[id].destroy();}catch(e){}delete CH[id];}}
+
+/* NAV */
+function goTo(id,btn){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(tb=>tb.classList.remove('on'));
+  var scr=el(id); if(scr) scr.classList.add('on');
+  // Activate the matching tab
+  var tabId={s0:'tb0',s2:'tb2',s3:'tb3',tp2:'tbtp2',tp3:'tbtp3'}[id];
+  ['tb0','tb2','tb3','tbtp2','tbtp3'].forEach(function(tid){var tb=el(tid);if(tb)tb.classList.remove('on');});
+  var tab=el(tabId); if(tab) tab.classList.add('on');
+  setTimeout(function(){
+    if(id==='s2')  updateArea('s2');
+    if(id==='s3')  updateArea('s3');
+    if(id==='tp2') updateAreaTP('tp2','ZCIQ',ZCIQ_L);
+    if(id==='tp3') updateAreaTP('tp3','ZENV',ZENV_L);
+    if(id==='s0')  updateHomeKpis();
+  },80);
+}
+
+function updateHomeKpis(){
+  // Production KPIs for home cards
+  var zciq=PROD.filter(function(r){return r.area==='ZCIQ';});
+  var zenv=PROD.filter(function(r){return r.area==='ZENV';});
+  var kgIn=zciq.reduce(function(a,r){return a+r.kg_ingresados;},0);
+  var kgAp=zciq.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+  var rend=kgIn>0?(kgAp/kgIn*100):0;
+  var esps=new Set(zciq.map(function(r){return r.especie;}).filter(Boolean));
+  var ton=zenv.reduce(function(a,r){return a+r.ton_real;},0);
+  var cajas=zenv.reduce(function(a,r){return a+r.cajas;},0);
+  var skus=new Set(zenv.map(function(r){return r.sku;}).filter(Boolean));
+  // TP KPIs
+  var tp_zciq=PD.filter(function(r){return ZCIQ_L.includes(r.linea);});
+  var tp_zenv=PD.filter(function(r){return ZENV_L.includes(r.linea);});
+  var td_zciq=TD.filter(function(r){return ZCIQ_L.includes(r.linea);});
+  var td_zenv=TD.filter(function(r){return ZENV_L.includes(r.linea);});
+  var teo2=td_zciq.reduce(function(a,r){return a+r.minutos;},0);
+  var efec2=td_zciq.reduce(function(a,r){return a+(r.efec_min||0);},0);
+  var disp2=teo2>0?(efec2/teo2*100):0;
+  var teo3=td_zenv.reduce(function(a,r){return a+r.minutos;},0);
+  var efec3=td_zenv.reduce(function(a,r){return a+(r.efec_min||0);},0);
+  var disp3=teo3>0?(efec3/teo3*100):0;
+  function setEl(id,v){var e=el(id);if(e)e.textContent=v;}
+  setEl('hKgIn',  fmtK(kgIn));
+  setEl('hRend',  rend.toFixed(1)+'%');
+  setEl('hEsp',   esps.size);
+  setEl('hTon',   ton.toFixed(1)+' t');
+  setEl('hCump',  cajas>0?(cajas/cajas*100).toFixed(0)+'%':'—');
+  setEl('hSku',   skus.size);
+  setEl('hTpPerd',  fmtK(tp_zciq.reduce(function(a,r){return a+r.minutos;},0))+' min');
+  setEl('hTpDisp',  disp2.toFixed(1)+'%');
+  setEl('hTpEv',    tp_zciq.length);
+  setEl('hTpPerd3', fmtK(tp_zenv.reduce(function(a,r){return a+r.minutos;},0))+' min');
+  setEl('hTpDisp3', disp3.toFixed(1)+'%');
+  setEl('hTpEv3',   tp_zenv.length);
+  setEl('hDate', new Date().toLocaleDateString('es-CL'));
+}
+
+/* FILTER */
+function fp(o){
+  return PROD.filter(r=>
+    (!o.año||r.año==o.año)&&(!o.mes||r.mes==o.mes)&&(!o.sem||r.semana==o.sem)&&
+    (!o.dia||r.dia==o.dia)&&(!o.area||r.area===o.area)&&(!o.linea||r.linea===o.linea)&&
+    (!o.turno||String(r.turno)===o.turno)&&(!o.esp||r.especie===o.esp));
+}
+function getOpts(pfx,area){
+  return{año:sv(pfx+'A'),mes:sv(pfx+'M'),sem:sv(pfx+'S'),dia:sv(pfx+'D'),
+    turno:sv(pfx+'Tu'),esp:sv(pfx+'Esp'),
+    linea:sv(pfx==='s2'?'s2L':''),area};
+}
+
+/* CASCADE FILTERS */
+function cascMS(pfx,msKey){
+  const mes=sv(pfx+'M'); const semEl=el(pfx+'S'); if(!semEl)return;
+  const sems=(mes&&PIDX[msKey]&&PIDX[msKey][mes])||[];
+  const cur=semEl.value;
+  semEl.innerHTML='<option value="">Todas</option>'+sems.map(s=>'<option value="'+s+'">Sem '+s+'</option>').join('');
+  if(sems.map(String).includes(cur))semEl.value=cur;
+  cascSD(pfx,msKey.replace('MS','SD'));
+}
+function cascSD(pfx,sdKey){
+  const sem=sv(pfx+'S'); const diaEl=el(pfx+'D'); if(!diaEl)return;
+  let dias=[];
+  if(sem){
+    dias=(PIDX[sdKey]&&PIDX[sdKey][sem])||[];
+  } else {
+    // No semana selected: show all días for selected mes (or all)
+    const mes=sv(pfx+'M');
+    const mdKey=sdKey.replace('SD','MD');
+    dias=mes?(PIDX[mdKey]&&PIDX[mdKey][mes])||[]:
+      [...new Set(Object.values(PIDX[mdKey]||{}).flat())].sort((a,b)=>a-b);
+  }
+  const cur=diaEl.value;
+  diaEl.innerHTML='<option value="">Todos</option>'+dias.map(d=>'<option value="'+d+'">Día '+d+'</option>').join('');
+  if(dias.map(String).includes(cur))diaEl.value=cur;
+}
+
+/* STICKY FBAR */
+function tfbar(pfx){
+  const n=pfx.slice(-1);
+  const inner=el('fi'+n),arrow=el('farr'+n);
+  if(!inner||!arrow)return;
+  const open=inner.classList.contains('exp');
+  inner.classList.toggle('exp',!open); inner.classList.toggle('col',open);
+  arrow.classList.toggle('open',!open);
+}
+function updPills(pfx){
+  const n=pfx.slice(-1); const pellsEl=el('pills'+n); if(!pellsEl)return;
+  const ids={ano:pfx+'A',mes:pfx+'M',sem:pfx+'S',dia:pfx+'D',turno:pfx+'Tu',esp:pfx+'Esp'};
+  let pills='';
+  Object.entries(ids).forEach(function(kv){
+    const key=kv[0],id=kv[1];
+    const e=el(id); if(!e||!e.value)return;
+    let val=e.value;
+    if(key==='mes')val=MESES[+val]||val;
+    if(key==='sem')val='S'+val;
+    if(key==='turno')val='T'+val;
+    pills+='<span class="fpill">'+val+'</span>';
+  });
+  pellsEl.innerHTML=pills;
+}
+
+/* POPULATE */
+function popArea(pfx,area,lines){
+  const pd=PROD.filter(r=>r.area===area);
+  const años=[...new Set(pd.map(r=>r.año))].sort();
+  const meses=[...new Set(pd.map(r=>r.mes))].sort((a,b)=>a-b);
+  const esps=[...new Set(pd.map(r=>r.especie).filter(Boolean))].sort();
+  function fill(id,opts,blank){
+    const e=el(id); if(!e)return; const cur=e.value;
+    e.innerHTML='<option value="">'+blank+'</option>'+opts.map(function(o){return'<option value="'+o.v+'">'+o.l+'</option>';}).join('');
+    if([...e.options].some(o=>o.value==cur))e.value=cur;
+  }
+  fill(pfx+'A',años.map(a=>({v:a,l:a})),'Todos');
+  fill(pfx+'M',meses.map(m=>({v:m,l:MESES_F[m]||m})),'Todos');
+  fill(pfx+'Esp',esps.map(e=>({v:e,l:e})),'Todas');
+  if(pfx==='s2') fill('s2L',lines.map(l=>({v:l,l:LMAP[l]||l})),'Todas');
+  if(pfx==='s3'){fill('s3SkuEsp',esps.map(e=>({v:e,l:e})),'Todas');}
+}
+
+/* CHART HELPERS - NO NESTED TEMPLATE LITERALS */
+function mkBar(id,labels,ds,opts){
+  if(!el(id))return; opts=opts||{};
+  dx(id);
+  CH[id]=new Chart(el(id),{type:'bar',data:{labels:labels,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:6}},
+        tooltip:{mode:'index',
+          callbacks:{
+            label:function(ctx){if(ctx.raw==null||ctx.raw===undefined)return null;return ' '+ctx.dataset.label+': '+fmtK(ctx.raw);},
+            afterBody:opts.afterBody||undefined
+          }}},
+      scales:{
+        x:{stacked:opts.stacked||false,grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:14,maxRotation:30}},
+        y:{stacked:opts.stacked||false,grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return fmtK(v);}}}
+      }}});
+}
+
+
+/* Kg vs IQF bar chart WITH rendimiento % line overlay */
+function mkKgIqfChart(id,labels,kgIn,kgAp){
+  if(!el(id))return; dx(id);
+  var rend=kgIn.map(function(i,idx){return i>0?+(kgAp[idx]/i*100).toFixed(1):null;});
+  CH[id]=new Chart(el(id),{
+    data:{labels:labels,datasets:[
+      {type:'bar',  label:'Kg Ingresados',data:kgIn,backgroundColor:'rgba(59,130,246,.5)',borderRadius:3,yAxisID:'y'},
+      {type:'bar',  label:'IQF Aprobado', data:kgAp,backgroundColor:'rgba(34,197,94,.7)', borderRadius:3,yAxisID:'y'},
+      {type:'line', label:'Rend.IQF%',   data:rend,borderColor:'#f59e0b',backgroundColor:'transparent',
+       pointRadius:4,tension:0.3,spanGaps:true,yAxisID:'y2',borderWidth:2,
+       pointBackgroundColor:rend.map(function(v){return v==null?'transparent':v>=90?C.grn:v>=80?C.amb:C.red;}),
+       pointBorderColor:rend.map(function(v){return v==null?'transparent':v>=90?C.grn:v>=80?C.amb:C.red;})}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:6}},
+        tooltip:{mode:'index',callbacks:{
+          label:function(ctx){
+            if(!ctx||ctx.raw==null)return null;
+            if(ctx.datasetIndex===2)return ' Rend.IQF: '+ctx.raw+'%';
+            return ' '+ctx.dataset.label+': '+fmtK(ctx.raw);
+          }
+        }}},
+      scales:{
+        x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:14,maxRotation:30}},
+        y:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return fmtK(v);}}},
+        y2:{position:'right',min:0,max:100,grid:{drawOnChartArea:false},
+            ticks:{color:'#f59e0b',font:{size:9},callback:function(v){return v+'%';}}}
+      }},
+    plugins:[{id:'ref85',afterDraw:function(ch){
+      if(!ch.scales||!ch.scales.y2)return;
+      var ctx=ch.ctx,left=ch.chartArea.left,right=ch.chartArea.right;
+      var yPx=ch.scales.y2.getPixelForValue(85);
+      ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(239,68,68,.4)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(left,yPx);ctx.lineTo(right,yPx);ctx.stroke();
+      ctx.setLineDash([]);ctx.fillStyle='rgba(239,68,68,.65)';ctx.font='bold 9px Inter';
+      ctx.fillText('85%',right-28,yPx-4);ctx.restore();}}]});
+}
+
+function mkBarH(id,labels,ds){
+  if(!el(id))return; dx(id);
+  CH[id]=new Chart(el(id),{type:'bar',data:{labels:labels,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){return ' '+fmtK(ctx.raw);}}}},
+      scales:{
+        x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return fmtK(v);}}},
+        y:{grid:{color:C.grid},ticks:{color:'rgba(255,255,255,.85)',font:{size:9}}}
+      }}});
+}
+
+function mkLine(id,labels,ds,opts){
+  if(!el(id))return; opts=opts||{};
+  var safeds=ds.filter(function(d){return d.data.some(function(v){return v!=null&&v!==0;});});
+  if(!safeds.length){dx(id);return;}
+  dx(id);
+  CH[id]=new Chart(el(id),{type:'line',data:{labels:labels,datasets:safeds},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:6}},
+        tooltip:{mode:'index',callbacks:{label:function(ctx){
+          if(!ctx||ctx.raw==null)return null;
+          return ' '+ctx.dataset.label+': '+(opts.pct?ctx.raw.toFixed(1)+'%':fmtK(ctx.raw));
+        }}}
+      },
+      scales:{
+        x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:20,maxRotation:35}},
+        y:{grid:{color:C.grid},
+           min:opts.pct?0:undefined,max:opts.pct?100:undefined,
+           ticks:{color:C.txt,font:{size:9},callback:function(v){return opts.pct?v+'%':fmtK(v);}}}
+      }
+    },
+    plugins:opts.refLine?[{id:'ref85',afterDraw:function(ch){
+      if(!ch.scales||!ch.scales.y)return;
+      var ctx=ch.ctx,left=ch.chartArea.left,right=ch.chartArea.right;
+      var yPx=ch.scales.y.getPixelForValue(85);
+      ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(239,68,68,.45)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(left,yPx);ctx.lineTo(right,yPx);ctx.stroke();
+      ctx.setLineDash([]);ctx.fillStyle='rgba(239,68,68,.7)';ctx.font='bold 9px Inter';
+      ctx.fillText('85%',left+4,yPx-4);ctx.restore();
+    }}]:[]
+  });
+}
+
+function mkDonut(id,cats,vals,colMap){
+  if(!el(id))return; var total=vals.reduce(function(a,b){return a+b;},0); if(!total)return;
+  dx(id);
+  CH[id]=new Chart(el(id),{type:'doughnut',
+    data:{labels:cats,datasets:[{data:vals,
+      backgroundColor:cats.map(function(c,i){return colMap&&colMap[c]?colMap[c]:LINE_COLS[i%LINE_COLS.length];}),
+      borderColor:'rgba(10,15,30,.8)',borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'42%',
+      plugins:{
+        legend:{position:'bottom',labels:{color:'rgba(255,255,255,.9)',font:{size:9},padding:8,
+          generateLabels:function(ch){var ds=ch.data.datasets[0];
+            return ch.data.labels.map(function(l,i){return{
+              text:l+'  '+(ds.data[i]/total*100).toFixed(1)+'%',
+              fillStyle:ds.backgroundColor[i],hidden:false,index:i,
+              fontColor:'rgba(255,255,255,.9)',strokeStyle:'transparent'};});}}},
+        tooltip:{callbacks:{label:function(ctx){return ctx.label+': '+fmtK(ctx.raw)+' ('+((ctx.raw/total)*100).toFixed(1)+'%)';}}}
+      }},
+    plugins:[{id:'pct',afterDraw:function(ch){
+      var ctx=ch.ctx,ds=ch.data.datasets[0],meta=ch.getDatasetMeta(0);
+      ctx.save();meta.data.forEach(function(arc,i){
+        var pct=(ds.data[i]/total*100).toFixed(1);
+        if(parseFloat(pct)<5)return;
+        var angle=(arc.startAngle+arc.endAngle)/2;
+        var r=(arc.innerRadius+arc.outerRadius)/2;
+        var x=arc.x+Math.cos(angle)*r,y=arc.y+Math.sin(angle)*r;
+        ctx.fillStyle='rgba(255,255,255,.95)';ctx.font='bold 10px Consolas';
+        ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(pct+'%',x,y);
+      });ctx.restore();}}]});
+}
+
+/* AGGREGATION HELPERS */
+function getDailyKeys(pd){
+  var set=new Set();pd.forEach(function(r){if(r.fecha)set.add(r.fecha);});
+  var keys=[...set].sort();
+  var labels=keys.map(function(d){var p=d.split('-');return +p[2]+'/'+ +p[1];});
+  return{keys:keys,labels:labels};
+}
+function getMonthKeys(pd){
+  var set=new Set();pd.forEach(function(r){if(r.año&&r.mes)set.add(r.año+'/'+String(r.mes).padStart(2,'0'));});
+  var keys=[...set].sort();
+  var labels=keys.map(function(k){var p=k.split('/');return MESES[+p[1]]||p[1];});
+  return{keys:keys,labels:labels};
+}
+function sumDay(pd,dkeys,fn){
+  return dkeys.map(function(k){return fn(pd.filter(function(r){return r.fecha===k;}));});
+}
+function avgDay(pd,dkeys,fn){
+  return dkeys.map(function(k){
+    var sub=pd.filter(function(r){return r.fecha===k&&fn(r)!=null&&fn(r)>0;});
+    return sub.length?sub.reduce(function(a,r){return a+fn(r);},0)/sub.length:null;});
+}
+function sumMon(pd,mkeys,fn){
+  return mkeys.map(function(k){var p=k.split('/');
+    return fn(pd.filter(function(r){return r.año==+p[0]&&r.mes==+p[1];}));});
+}
+function avgMon(pd,mkeys,fn){
+  return mkeys.map(function(k){var p=k.split('/');
+    var sub=pd.filter(function(r){return r.año==+p[0]&&r.mes==+p[1]&&fn(r)!=null&&fn(r)>0;});
+    return sub.length?sub.reduce(function(a,r){return a+fn(r);},0)/sub.length:null;});
+}
+
+/* ── KPIs ── */
+function buildKpiS2(pd){
+  var kgIn=pd.reduce(function(a,r){return a+r.kg_ingresados;},0);
+  var kgAp=pd.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+  var rend=kgIn>0?(kgAp/kgIn*100):0;
+  var kgPuro=pd.reduce(function(a,r){return a+r.kg_puro;},0);
+  var kgJugo=pd.reduce(function(a,r){return a+r.kg_jugo;},0);
+  var kgCrum=pd.reduce(function(a,r){return a+r.kg_crumble;},0);
+  var persArr=pd.filter(function(r){return r.personas>0;}).map(function(r){return r.personas;});
+  var pers=persArr.length?persArr.reduce(function(a,b){return a+b;})/persArr.length:0;
+  var kghArr=pd.filter(function(r){return r.kg_h_pers>0;}).map(function(r){return r.kg_h_pers;});
+  var kgh=kghArr.length?kghArr.reduce(function(a,b){return a+b;})/kghArr.length:0;
+  var rc=rend>=90?'kg':rend>=80?'ka':'kr';
+  el('s2Kpis').innerHTML=
+    '<div class="kpi kb"><div class="klbl">Kg Ingresados</div><div class="kval">'+fmtK(kgIn)+'</div><div class="ksub">materia prima total</div></div>'+
+    '<div class="kpi kg"><div class="klbl">IQF Aprobado</div><div class="kval">'+fmtK(kgAp)+'</div><div class="ksub">producto aprobado</div></div>'+
+    '<div class="kpi '+rc+'"><div class="klbl">Rendimiento IQF</div><div class="kval">'+rend.toFixed(1)+'%</div><div class="ksub">IQF ÷ Ingresados · Meta ≥ 85%</div>'+
+      '<div class="kbar"><div class="kbf" style="width:'+Math.min(100,rend)+'%;background:'+(rend>=90?C.grn:rend>=80?C.amb:C.red)+'"></div></div></div>'+
+    '<div class="kpi kl"><div class="klbl">Kg Pure</div><div class="kval">'+fmtK(kgPuro)+'</div><div class="ksub">subproducto</div></div>'+
+    '<div class="kpi ka"><div class="klbl">Kg Jugo</div><div class="kval">'+fmtK(kgJugo)+'</div><div class="ksub">subproducto</div></div>'+
+    '<div class="kpi kp"><div class="klbl">Kg Crumble</div><div class="kval">'+fmtK(kgCrum)+'</div><div class="ksub">subproducto</div></div>'+
+    '<div class="kpi kc"><div class="klbl">Personas Prom.</div><div class="kval">'+pers.toFixed(1)+'</div><div class="ksub">por turno</div></div>'+
+    '<div class="kpi kl"><div class="klbl">Kg/H/Persona</div><div class="kval">'+kgh.toFixed(1)+'</div><div class="ksub">productividad laboral</div></div>';
+}
+
+function buildKpiS3(pd){
+  var ton=pd.reduce(function(a,r){return a+r.ton_real;},0);
+  var cajas=pd.reduce(function(a,r){return a+r.cajas;},0);
+  var kgAp=pd.reduce(function(a,r){return a+r.kg_aprobadas;},0);
+  var bpmArr=pd.filter(function(r){return r.bpm_total>0;}).map(function(r){return r.bpm_total;});
+  var bpm=bpmArr.length?bpmArr.reduce(function(a,b){return a+b;})/bpmArr.length:0;
+  var bpmSArr=pd.filter(function(r){return r.bpm_std>0;}).map(function(r){return r.bpm_std;});
+  var bpmS=bpmSArr.length?bpmSArr.reduce(function(a,b){return a+b;})/bpmSArr.length:0;
+  var persArr=pd.filter(function(r){return r.personas>0;}).map(function(r){return r.personas;});
+  var pers=persArr.length?persArr.reduce(function(a,b){return a+b;})/persArr.length:0;
+  var kghArr=pd.filter(function(r){return r.kg_h_pers>0;}).map(function(r){return r.kg_h_pers;});
+  var kgh=kghArr.length?kghArr.reduce(function(a,b){return a+b;})/kghArr.length:0;
+  var bc=bpm>=bpmS?'kg':'kr';
+  var teoCaj=pd.reduce(function(a,r){return a+r.teo_cajas;},0);
+  var conCaj=pd.reduce(function(a,r){return a+r.con_cajas;},0);
+  var teoBol=pd.reduce(function(a,r){return a+r.teo_bolsas;},0);
+  var conBol=pd.reduce(function(a,r){return a+r.con_bolsas;},0);
+  var mermaCaj=Math.max(0,conCaj-teoCaj);
+  var mermaBol=Math.max(0,conBol-teoBol);
+  var pctMCaj=teoCaj>0?(mermaCaj/teoCaj*100):0;
+  var pctMBol=teoBol>0?(mermaBol/teoBol*100):0;
+  var kgIn3=pd.reduce(function(a,r){return a+r.kg_ingresados;},0);
+  var rend3=kgIn3>0?(kgAp/kgIn3*100):0;
+  var rc3=rend3>=98?'kg':rend3>=95?'ka':'kr';
+  // Programa cajas compliance
+  var o3=getOpts('s3','ZENV');
+  var progFilt=PROG.filter(function(r){
+    return(!o3.año||r.año==o3.año)&&
+           (!o3.mes||r.mes==o3.mes)&&
+           (!o3.dia||r.dia==o3.dia)&&
+           (!o3.turno||String(r.turno)==o3.turno);
+  });
+  var cajaProg=progFilt.reduce(function(a,r){return a+r.cajas_prog;},0);
+  var cajaCump=cajas;  // cajas real from pd
+  var pctCump=cajaProg>0?(cajaCump/cajaProg*100):0;
+  var ccol=pctCump>=100?'kg':pctCump>=85?'ka':'kr';
+  var kpiCumpStr=cajaProg>0?
+    '<div class="kpi kb"><div class="klbl">Cajas Programadas</div><div class="kval">'+fmt(cajaProg)+'</div><div class="ksub">según programa envasado</div></div>'+
+    '<div class="kpi '+ccol+'"><div class="klbl">Cumplimiento Prog.</div><div class="kval">'+pctCump.toFixed(1)+'%</div>'+
+    '<div class="ksub">'+fmt(cajaCump)+' reales vs '+fmt(cajaProg)+' prog.</div>'+
+    '<div class="kbar"><div class="kbf" style="width:'+Math.min(100,pctCump)+'%;background:'+(pctCump>=100?'var(--grn)':pctCump>=85?'var(--amb)':'var(--red)')+'"></div></div></div>'
+    :'';
+  el('s3Kpis').innerHTML=
+    '<div class="kpi kb"><div class="klbl">Toneladas Reales</div><div class="kval">'+ton.toFixed(1)+'</div><div class="ksub">producción total</div></div>'+
+    kpiCumpStr+
+    '<div class="kpi kg"><div class="klbl">Cajas Producidas</div><div class="kval">'+fmtK(cajas)+'</div><div class="ksub">total período</div></div>'+
+    '<div class="kpi '+rc3+'"><div class="klbl">Rendimiento IQF</div><div class="kval">'+rend3.toFixed(1)+'%</div><div class="ksub">Kg Aprobados ÷ Kg Ingresados</div></div>'+
+    '<div class="kpi kc"><div class="klbl">Kg Aprobados</div><div class="kval">'+fmtK(kgAp)+'</div><div class="ksub">materia prima OK</div></div>'+
+    '<div class="kpi '+bc+'"><div class="klbl">B/Min Promedio</div><div class="kval">'+bpm.toFixed(1)+'</div><div class="ksub">Std: '+bpmS.toFixed(1)+' · Bolsas/min</div></div>'+
+    '<div class="kpi kr"><div class="klbl">Merma Cajas</div><div class="kval">'+pctMCaj.toFixed(1)+'%</div><div class="ksub">'+fmt(mermaCaj)+' und · Consumo vs Teórico</div></div>'+
+    '<div class="kpi ka"><div class="klbl">Merma Bolsas</div><div class="kval">'+pctMBol.toFixed(1)+'%</div><div class="ksub">'+fmt(mermaBol)+' und · Consumo vs Teórico</div></div>'+
+    '<div class="kpi kc"><div class="klbl">Personas Prom.</div><div class="kval">'+pers.toFixed(1)+'</div><div class="ksub">por turno</div></div>'+
+    '<div class="kpi kl"><div class="klbl">Kg/H/Persona</div><div class="kval">'+kgh.toFixed(1)+'</div><div class="ksub">productividad</div></div>';
+}
+
+/* ── S2 CHARTS ── */
+function buildS2Charts(pd){
+  var mk=getMonthKeys(pd); var dk=getDailyKeys(pd);
+
+
+  // Daily rendimiento IQF
+
+  ddLine('dd_s2KghpD','s2KghpD',pd,function(r){return r.kg_h_pers;},'Kg/H/Persona','#84cc16',false);
+
+
+  // Donut especie
+  var espMap={};pd.forEach(function(r){if(r.especie)espMap[r.especie]=(espMap[r.especie]||0)+r.kg_ingresados;});
+  var esps=Object.keys(espMap).sort(function(a,b){return espMap[b]-espMap[a];});
+  mkDonut('s2EspDon',esps,esps.map(function(e){return Math.round(espMap[e]);}),ESP_COLS);
+
+  ddBar('dd_s2SubProd','s2SubProd',pd,'mes',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    var getS=function(field){return ddd.sumFn(function(s){return Math.round(s.reduce(function(a,r){return a+r[field];},0));});};
+    var kP=getS('kg_puro'),kJ=getS('kg_jugo'),kC=getS('kg_crumble');
+    if(kP.some(function(v){return v>0;})||kJ.some(function(v){return v>0;})||kC.some(function(v){return v>0;})){
+      mkBar(id,ddd.labels,[
+        {label:'Kg Pure',   data:kP,backgroundColor:'rgba(132,204,22,.7)',borderRadius:2,stack:'s'},
+        {label:'Kg Jugo',   data:kJ,backgroundColor:'rgba(6,182,212,.7)', borderRadius:2,stack:'s'},
+        {label:'Kg Crumble',data:kC,backgroundColor:'rgba(168,85,247,.7)',borderRadius:2,stack:'s'}
+      ],{stacked:true});
+    }
+  });
+
+  // Rendimiento por línea mensual
+  // Rendimiento IQF DIARIO por ESPECIE — area lines
+  var espAll=[...new Set(pd.map(function(r){return r.especie;}).filter(Boolean))].sort();
+  var espLineDs=espAll.map(function(esp,i){
+    var col=ESP_COLS[esp]||LINE_COLS[i%LINE_COLS.length];
+    var data=dk.keys.map(function(fecha){
+      var s=pd.filter(function(r){return r.especie===esp&&r.fecha===fecha;});
+      var kg=s.reduce(function(a,r){return a+r.kg_ingresados;},0);
+      var ap=s.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+      return kg>0?+(ap/kg*100).toFixed(1):null;
+    });
+    return{type:'line',label:esp,data:data,borderColor:col,backgroundColor:col+'22',
+           fill:true,tension:0.3,pointRadius:0,borderWidth:2,spanGaps:true};
+  }).filter(function(d){return d.data.some(function(v){return v!=null;});});
+  dx('s2RendLinea');
+  if(el('s2RendLinea')&&espLineDs.length){
+    CH['s2RendLinea']=new Chart(el('s2RendLinea'),{
+      data:{labels:dk.labels,datasets:espLineDs},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:6}},
+          tooltip:{mode:'index',callbacks:{label:function(ctx){if(ctx.raw==null)return null;return ' '+ctx.dataset.label+': '+ctx.raw+'%';}}}
+        },
+        scales:{
+          x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:16,maxRotation:35}},
+          y:{grid:{color:C.grid},min:0,max:100,ticks:{color:C.txt,font:{size:9},callback:function(v){return v+'%';}}}
+        }
+      },
+      plugins:[{id:'ref85',afterDraw:function(ch){
+        if(!ch.scales||!ch.scales.y)return;
+        var ctx=ch.ctx,left=ch.chartArea.left,right=ch.chartArea.right;
+        var yPx=ch.scales.y.getPixelForValue(85);
+        ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(239,68,68,.5)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(left,yPx);ctx.lineTo(right,yPx);ctx.stroke();
+        ctx.setLineDash([]);ctx.fillStyle='rgba(239,68,68,.8)';ctx.font='bold 9px Inter';
+        ctx.fillText('85%',left+4,yPx-4);ctx.restore();
+      }}]
+    });
+  }
+}
+
+/* ── S3 CHARTS ── */
+function buildS3Charts(pd){
+  var mk=getMonthKeys(pd); var dk=getDailyKeys(pd);
+
+  // ── Cajas: drill-down (Producidas + Programadas + Cumplimiento) ──────────
+  ddBar('dd_s3CajasMes','s3CajasMes',pd,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    var cajasD2=ddd.sumFn(function(s){return Math.round(s.reduce(function(a,r){return a+r.cajas;},0));});
+    var progD2=ddd.keys.map(function(k){
+      var progSub;
+      if(ddd.level==='dia') progSub=PROG.filter(function(r){return r.fecha===k;});
+      else if(ddd.level==='sem') progSub=PROG.filter(function(r){return String(new Date(r.fecha+'T00:00:00').getDay())===k||
+        (function(){var d=new Date(r.fecha+'T00:00:00');var jan1=new Date(d.getFullYear(),0,1);
+         return String(Math.ceil((((d-jan1)/86400000)+jan1.getDay()+1)/7));}())===k;});
+      else{var p=k.split('/');progSub=PROG.filter(function(r){var d=new Date(r.fecha+'T00:00:00');return d.getFullYear()==+p[0]&&(d.getMonth()+1)==+p[1];});}
+      if(ddd.level==='sem'){
+        progSub=PROG.filter(function(r){
+          var d=new Date(r.fecha+'T00:00:00');var jan1=new Date(d.getFullYear(),0,1);
+          var wk=Math.ceil((((d-jan1)/86400000)+jan1.getDay()+1)/7);
+          return String(wk)===k;});
+      }
+      return Math.round(progSub.reduce(function(a,r){return a+r.cajas_prog;},0));
+    });
+    var cumpD2=cajasD2.map(function(c,i){return progD2[i]>0?+(c/progD2[i]*100).toFixed(1):null;});
+    var hasProg2=progD2.some(function(v){return v>0;});
+    var ds=[{type:'bar',label:'Cajas Producidas',data:cajasD2,
+      backgroundColor:'rgba(6,182,212,.55)',borderColor:'rgba(6,182,212,.9)',
+      borderWidth:1,borderRadius:2,yAxisID:'y',order:2}];
+    if(hasProg2){
+      ds.push({type:'bar',label:'Cajas Programadas',data:progD2,
+        backgroundColor:'rgba(245,158,11,.35)',borderColor:'rgba(245,158,11,.8)',
+        borderWidth:1,borderRadius:2,yAxisID:'y',order:3});
+      ds.push({type:'line',label:'Cumplimiento %',data:cumpD2,
+        borderColor:'#22c55e',backgroundColor:'transparent',
+        pointRadius:cumpD2.map(function(v){return v!=null?2:0;}),
+        pointBackgroundColor:cumpD2.map(function(v){return v==null?'transparent':v>=100?C.grn:v>=85?C.amb:C.red;}),
+        tension:0.2,spanGaps:true,yAxisID:'y2',borderWidth:2,order:1});
+    }
+    dx(id);
+    CH[id]=new Chart(el(id),{data:{labels:ddd.labels,datasets:ds},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:6}},
+          tooltip:{mode:'index',callbacks:{label:function(ctx){
+            if(!ctx||ctx.raw==null)return null;
+            if(ctx.dataset.label==='Cumplimiento %')return ' Cumpl: '+ctx.raw+'%';
+            return ' '+ctx.dataset.label+': '+fmtK(ctx.raw)+' cajas';
+          }}}},
+        scales:{
+          x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:20,maxRotation:35}},
+          y:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return fmtK(v);}}},
+          y2:{position:'right',min:0,max:150,grid:{drawOnChartArea:false},
+              ticks:{color:C.grn,font:{size:9},callback:function(v){return v+'%';}}}
+        }
+      }
+    });
+  });
+
+  // ── Toneladas por mes ──────────────────────────────────────────────────
+  ddBar('dd_s3TonMes','s3TonMes',pd,'mes',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    var data=ddd.sumFn(function(s){return+(s.reduce(function(a,r){return a+r.ton_real;},0).toFixed(2));});
+    mkBar(id,ddd.labels,[{label:'Toneladas',data:data,backgroundColor:'rgba(34,197,94,.65)',borderRadius:3}]);
+  });
+
+  // ── BPM drill-down ────────────────────────────────────────────────────
+  ddBar('dd_s3BpmD','s3BpmD',pd,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    mkLine(id,ddd.labels,[
+      {label:'B/Min Real',data:ddd.avgFn(function(r){return r.bpm_total;}),
+       borderColor:C.cyn,backgroundColor:'rgba(6,182,212,.07)',fill:true,
+       tension:0.3,pointRadius:ddd.level==='dia'?2:4,spanGaps:true},
+      {label:'B/Min Std', data:ddd.avgFn(function(r){return r.bpm_std;}),
+       borderColor:C.amb,borderDash:[4,3],backgroundColor:'transparent',
+       tension:0.3,pointRadius:ddd.level==='dia'?2:4,spanGaps:true}
+    ]);
+  });
+
+  // ── Kg/H/Persona drill-down ─────────────────────────────────────────────
+  ddBar('dd_s3KghpD','s3KghpD',pd,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    mkLine(id,ddd.labels,[{label:'Kg/H/Persona',
+      data:ddd.avgFn(function(r){return r.kg_h_pers;}),
+      borderColor:'#84cc16',backgroundColor:'rgba(132,204,22,.07)',fill:true,
+      tension:0.3,pointRadius:ddd.level==='dia'?2:4,spanGaps:true}]);
+  });
+
+  // ── Donut especie ──────────────────────────────────────────────────────
+  var espMap={};pd.forEach(function(r){if(r.especie)espMap[r.especie]=(espMap[r.especie]||0)+r.cajas;});
+  var esps=Object.keys(espMap).sort(function(a,b){return espMap[b]-espMap[a];});
+  mkDonut('s3EspDon',esps,esps.map(function(e){return Math.round(espMap[e]);}),ESP_COLS);
+
+  // ── Rendimiento IQF drill-down ZENV ──────────────────────────────────────
+  ddBar('dd_s3RendD','s3RendD',pd,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    var data=ddd.keys.map(function(k){
+      var s;
+      if(ddd.level==='dia') s=pd.filter(function(r){return r.fecha===k;});
+      else if(ddd.level==='sem') s=pd.filter(function(r){return String(r.semana)===k;});
+      else{var p=k.split('/');s=pd.filter(function(r){return r.año==+p[0]&&r.mes==+p[1];});}
+      var kg=s.reduce(function(a,r){return a+r.kg_ingresados;},0);
+      var ap=s.reduce(function(a,r){return a+r.kg_aprobadas;},0);
+      return kg>0?+(ap/kg*100).toFixed(1):null;
+    });
+    mkLine(id,ddd.labels,[{label:'Rend.IQF%',data:data,borderColor:C.grn,
+      backgroundColor:'rgba(34,197,94,.07)',fill:true,tension:0.3,
+      pointRadius:ddd.level==='dia'?2:4,spanGaps:true,
+      pointBackgroundColor:data.map(function(v){return v==null?'transparent':v>=98?C.grn:v>=95?C.amb:C.red;})}],
+      {pct:true,refLine:false});
+  });
+
+  // ── Merma Cajas % drill-down ──────────────────────────────────────────────
+  ddBar('dd_s3MermaCajD','s3MermaCajD',pd,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    var data=ddd.keys.map(function(k){
+      var s;
+      if(ddd.level==='dia') s=pd.filter(function(r){return r.fecha===k;});
+      else if(ddd.level==='sem') s=pd.filter(function(r){return String(r.semana)===k;});
+      else{var p=k.split('/');s=pd.filter(function(r){return r.año==+p[0]&&r.mes==+p[1];});}
+      var teo=s.reduce(function(a,r){return a+r.teo_cajas;},0);
+      var mer=Math.max(0,s.reduce(function(a,r){return a+(r.con_cajas-r.teo_cajas);},0));
+      return teo>0?+(mer/teo*100).toFixed(2):null;
+    });
+    dx(id);
+    if(!el(id))return;
+    CH[id]=new Chart(el(id),{type:'line',
+      data:{labels:ddd.labels,datasets:[{label:'% Merma Cajas',data:data,
+        borderColor:C.red,backgroundColor:'rgba(239,68,68,.1)',fill:true,
+        tension:0.3,pointRadius:ddd.level==='dia'?3:5,borderWidth:2,spanGaps:true,
+        pointBackgroundColor:data.map(function(v){return v>0?C.red:'transparent';})}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:6}},
+          tooltip:{mode:'index',callbacks:{label:function(ctx){if(ctx.raw==null)return null;return ' Merma: '+ctx.raw.toFixed(2)+'%';}}}},
+        scales:{x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:20,maxRotation:35}},
+                y:{grid:{color:C.grid},min:0,ticks:{color:C.txt,font:{size:9},callback:function(v){return v+'%';}}}}}});
+  });
+
+  // ── Merma Bolsas % drill-down ─────────────────────────────────────────────
+  ddBar('dd_s3MermaBolD','s3MermaBolD',pd,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    var data=ddd.keys.map(function(k){
+      var s;
+      if(ddd.level==='dia') s=pd.filter(function(r){return r.fecha===k;});
+      else if(ddd.level==='sem') s=pd.filter(function(r){return String(r.semana)===k;});
+      else{var p=k.split('/');s=pd.filter(function(r){return r.año==+p[0]&&r.mes==+p[1];});}
+      var teo=s.reduce(function(a,r){return a+r.teo_bolsas;},0);
+      var mer=Math.max(0,s.reduce(function(a,r){return a+(r.con_bolsas-r.teo_bolsas);},0));
+      return teo>0?+(mer/teo*100).toFixed(2):null;
+    });
+    dx(id);
+    if(!el(id))return;
+    CH[id]=new Chart(el(id),{type:'line',
+      data:{labels:ddd.labels,datasets:[{label:'% Merma Bolsas',data:data,
+        borderColor:C.amb,backgroundColor:'rgba(245,158,11,.1)',fill:true,
+        tension:0.3,pointRadius:ddd.level==='dia'?3:5,borderWidth:2,spanGaps:true,
+        pointBackgroundColor:data.map(function(v){return v>0?C.amb:'transparent';})}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:6}},
+          tooltip:{mode:'index',callbacks:{label:function(ctx){if(ctx.raw==null)return null;return ' Merma: '+ctx.raw.toFixed(2)+'%';}}}},
+        scales:{x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:20,maxRotation:35}},
+                y:{grid:{color:C.grid},min:0,ticks:{color:C.txt,font:{size:9},callback:function(v){return v+'%';}}}}}});
+  });
+}
+
+
+/* ── LINE ACCORDION ── */
+function buildS2Lines(pd){
+  // ── By ESPECIE (not by line) ──────────────────────────────────────────
+  var especies=[...new Set(pd.map(function(r){return r.especie;}).filter(Boolean))].sort();
+  var container=el('s2Lines'); if(!container)return;
+  var html='';
+  especies.forEach(function(esp,i){
+    var sub=pd.filter(function(r){return r.especie===esp;});
+    var kgIn=sub.reduce(function(a,r){return a+r.kg_ingresados;},0);
+    var kgAp=sub.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+    var kgPuro=sub.reduce(function(a,r){return a+r.kg_puro;},0);
+    var kgJugo=sub.reduce(function(a,r){return a+r.kg_jugo;},0);
+    var kgCrum=sub.reduce(function(a,r){return a+r.kg_crumble;},0);
+    var rend=kgIn>0?(kgAp/kgIn*100):0;
+    var persArr=sub.filter(function(r){return r.personas>0;}).map(function(r){return r.personas;});
+    var pers=persArr.length?persArr.reduce(function(a,b){return a+b;})/persArr.length:0;
+    var kghArr=sub.filter(function(r){return r.kg_h_pers>0;}).map(function(r){return r.kg_h_pers;});
+    var kgh=kghArr.length?kghArr.reduce(function(a,b){return a+b;})/kghArr.length:0;
+    var col=ESP_COLS[esp]||LINE_COLS[i%LINE_COLS.length];
+    var rc=rend>=90?C.grn:rend>=80?C.amb:C.red;
+    var espId='s2esp_'+esp.replace(/[^a-z0-9]/gi,'_');
+    // Lines that processed this especie
+    var lines=[...new Set(sub.map(function(r){return r.linea;}).filter(function(l){return ZCIQ_L.includes(l);}))].sort();
+    html+='<div class="linegrp" id="'+espId+'" data-esp="'+esp+'" data-pfx="s2">'+
+      '<div class="lghead" onclick="toggleLGEsp(this)">'+
+        '<div class="lgh-dot" style="background:'+col+'"></div>'+
+        '<span class="lgh-title">'+(ESP_ICONS[esp]||'🌿')+' '+esp+'</span>'+
+        '<span class="lgh-stats">KgIn: '+fmtK(kgIn)+' · IQF: '+fmtK(kgAp)+' · Rend: <span style="color:'+rc+'">'+rend.toFixed(1)+'%</span> · '+lines.length+' líneas</span>'+
+        '<span class="lgh-arrow">▼</span>'+
+      '</div>'+
+      '<div class="lgbody">'+
+        // KPIs generales de la especie
+        '<div class="lkpis">'+
+          '<div class="lk"><div class="lklbl">Kg Ingresados</div><div class="lkval" style="color:var(--acc2)">'+fmtK(kgIn)+'</div><div class="lksub">materia prima</div></div>'+
+          '<div class="lk"><div class="lklbl">IQF Aprobado</div><div class="lkval" style="color:var(--grn)">'+fmtK(kgAp)+'</div><div class="lksub">producto aprobado</div></div>'+
+          '<div class="lk"><div class="lklbl">Rendimiento</div><div class="lkval" style="color:'+rc+'">'+rend.toFixed(1)+'%</div><div class="lksub">IQF ÷ Ingresados</div></div>'+
+          '<div class="lk"><div class="lklbl">Kg Pure</div><div class="lkval" style="color:var(--lime)">'+fmtK(kgPuro)+'</div><div class="lksub">subproducto</div></div>'+
+          '<div class="lk"><div class="lklbl">Kg Jugo</div><div class="lkval" style="color:var(--cyn)">'+fmtK(kgJugo)+'</div><div class="lksub">subproducto</div></div>'+
+          '<div class="lk"><div class="lklbl">Kg Crumble</div><div class="lkval" style="color:var(--pur)">'+fmtK(kgCrum)+'</div><div class="lksub">subproducto</div></div>'+
+          '<div class="lk"><div class="lklbl">Personas Prom.</div><div class="lkval" style="color:var(--cyn)">'+pers.toFixed(1)+'</div><div class="lksub">por turno</div></div>'+
+          '<div class="lk"><div class="lklbl">Kg/H/Persona</div><div class="lkval" style="color:var(--lime)">'+kgh.toFixed(1)+'</div><div class="lksub">productividad</div></div>'+
+        '</div>'+
+        // Gráficos generales de la especie
+        '<div class="g2">'+
+          '<div class="gc"><div id="dd_'+espId+'_kg" style="display:flex;flex-direction:column;height:100%;"><div class="gt">📊 Kg Ingresados vs IQF — Mensual</div><div class="cw h200"><canvas id="'+espId+'_kg"></canvas></div></div></div>'+
+          '<div class="gc"><div id="dd_'+espId+'_rd" style="display:flex;flex-direction:column;height:100%;"><div class="gt">👥 Personas — Diario</div><div class="cw h200"><canvas id="'+espId+'_rd"></canvas></div></div></div>'+
+        '</div>'+
+        '<div class="g2" style="margin-top:10px;">'+
+          '<div class="gc"><div id="dd_'+espId+'_kh" style="display:flex;flex-direction:column;height:100%;"><div class="gt">👥 Kg/H/Persona — Diario</div><div class="cw h200"><canvas id="'+espId+'_kh"></canvas></div></div></div>'+
+          '<div class="gc"><div id="dd_'+espId+'_tu" style="display:flex;flex-direction:column;height:100%;"><div class="gt">📦 Kg Ingresados por Turno — Diario</div><div class="cw h200"><canvas id="'+espId+'_tu"></canvas></div></div></div>'+
+        '</div>'+
+        // Sub-accordion: lines that processed this especie
+        '<div class="slbl" style="margin-top:14px;">Líneas que procesaron '+esp+'</div>'+
+        '<div id="'+espId+'_lines"></div>'+
+      '</div>'+
+    '</div>';
+  });
+  container.innerHTML=html;
+  if(!window._PC) window._PC={};
+  especies.forEach(function(esp){
+    window._PC['s2esp_'+esp.replace(/[^a-z0-9]/gi,'_')]=pd;
+  });
+}
+
+/* Constants for especie icons */
+var ESP_ICONS={FRAMBUESAS:'🍓',FRUTILLAS:'🍓',ARANDANOS:'🫐',MORAS:'🫐',UVAS:'🍇',CEREZAS:'🍒'};
+
+function toggleLGEsp(hd){
+  hd.classList.toggle('open');
+  var body=hd.nextElementSibling; body.classList.toggle('open');
+  if(hd.classList.contains('open')){
+    var grp=hd.closest('.linegrp');
+    var esp=grp.dataset.esp;
+    var espId=grp.id;
+    var cached=window._PC&&window._PC[espId];
+    var sub=cached?cached.filter(function(r){return r.especie===esp;}):PROD.filter(function(r){return r.especie===esp&&r.area==='ZCIQ';});
+    renderEspecieSection(espId,esp,sub);
+  }
+}
+
+function renderEspecieSection(espId,esp,sub){
+  // All 4 especie-level charts with drill-down
+  ddKgIqf('dd_'+espId+'_kg', espId+'_kg', sub);
+  ddLine('dd_'+espId+'_rd', espId+'_rd', sub, function(r){return r.personas;}, 'Personas','rgba(168,85,247,.8)',false);
+  ddLine('dd_'+espId+'_kh', espId+'_kh', sub, function(r){return r.kg_h_pers;}, 'Kg/H/Persona','#84cc16',false);
+  ddTurno('dd_'+espId+'_tu', espId+'_tu', sub);
+  // Lines as COLUMNS side by side — charts stack vertically inside each column
+  var linesContainer=el(espId+'_lines'); if(!linesContainer)return;
+  var lines=[...new Set(sub.map(function(r){return r.linea;}).filter(function(l){return ZCIQ_L.includes(l);}))].sort();
+  if(!lines.length){linesContainer.innerHTML='<span style="color:var(--mut)">Sin líneas</span>';return;}
+
+  // Build column headers
+  var colHeaders='';
+  lines.forEach(function(l,li){
+    var lsub=sub.filter(function(r){return r.linea===l;});
+    var lKgIn=lsub.reduce(function(a,r){return a+r.kg_ingresados;},0);
+    var lKgAp=lsub.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+    var lRend=lKgIn>0?(lKgAp/lKgIn*100):0;
+    var lcol=LINE_COLS[li%LINE_COLS.length];
+    var lrc=lRend>=90?C.grn:lRend>=80?C.amb:C.red;
+    colHeaders+=
+      '<div style="border:1px solid var(--brd);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;gap:10px;min-width:0;">'+
+        // Column header
+        '<div style="background:'+lcol+'22;border-bottom:1px solid var(--brd);padding:8px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;">'+
+          '<div style="width:9px;height:9px;border-radius:50%;background:'+lcol+'"></div>'+
+          '<span style="font-size:12px;font-weight:700;color:var(--txt)">'+(LMAP[l]||l)+'</span>'+
+        '</div>'+
+        // KPIs inside column header area
+        '<div style="padding:0 10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;flex-shrink:0;">'+
+          '<div class="lk"><div class="lklbl">Kg Ingresados</div><div class="lkval" style="color:var(--acc2);font-size:13px">'+fmtK(lKgIn)+'</div></div>'+
+          '<div class="lk"><div class="lklbl">IQF Aprobado</div><div class="lkval" style="color:var(--grn);font-size:13px">'+fmtK(lKgAp)+'</div></div>'+
+          '<div class="lk" style="grid-column:1/-1"><div class="lklbl">Rendimiento</div><div class="lkval" style="color:'+lrc+';font-size:14px">'+lRend.toFixed(1)+'%</div></div>'+
+        '</div>'+
+        // Charts stacked vertically inside this column
+        '<div style="padding:0 10px 10px;display:flex;flex-direction:column;gap:10px;">'+
+          '<div class="gc" style="padding:8px"><div id="dd_'+espId+'_l_'+l+'_kg" style="display:flex;flex-direction:column;height:100%;"><div class="gt" style="margin-bottom:4px">📊 Kg vs IQF — Mes</div><div class="cw h180"><canvas id="'+espId+'_l_'+l+'_kg"></canvas></div></div></div>'+
+          '<div class="gc" style="padding:8px"><div id="dd_'+espId+'_l_'+l+'_rd" style="display:flex;flex-direction:column;height:100%;"><div class="gt" style="margin-bottom:4px">👥 Personas — Diario</div><div class="cw h180"><canvas id="'+espId+'_l_'+l+'_rd"></canvas></div></div></div>'+
+          '<div class="gc" style="padding:8px"><div id="dd_'+espId+'_l_'+l+'_kh" style="display:flex;flex-direction:column;height:100%;"><div class="gt" style="margin-bottom:4px">👥 Kg/H/Persona — Diario</div><div class="cw h180"><canvas id="'+espId+'_l_'+l+'_kh"></canvas></div></div></div>'+
+          '<div class="gc" style="padding:8px"><div id="dd_'+espId+'_l_'+l+'_tu" style="display:flex;flex-direction:column;height:100%;"><div class="gt" style="margin-bottom:4px">📦 Kg por Turno — Diario</div><div class="cw h180"><canvas id="'+espId+'_l_'+l+'_tu"></canvas></div></div></div>'+
+        '</div>'+
+      '</div>';
+  });
+
+  // Wrap all columns in a horizontal grid
+  var cols=Math.min(lines.length,4);
+  linesContainer.innerHTML=
+    '<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:10px;overflow-x:auto;">'+
+      colHeaders+
+    '</div>';
+
+  // Render all charts immediately
+  lines.forEach(function(l){
+    var lid=espId+'_l_'+l;
+    var lsub=sub.filter(function(r){return r.linea===l;});
+    renderEspLineCharts(lid,lsub);
+  });
+}
+
+function toggleLGEspLine(hd){
+  hd.classList.toggle('open');
+  var body=hd.nextElementSibling; body.classList.toggle('open');
+  if(hd.classList.contains('open')){
+    var grp=hd.closest('.linegrp');
+    var l=grp.dataset.line;
+    var esp=grp.dataset.esp;
+    var lid=grp.id;
+    var cached=window._PC&&window._PC[grp.dataset.espid];
+    var lsub=cached?cached.filter(function(r){return r.linea===l&&r.especie===esp;}):
+             PROD.filter(function(r){return r.linea===l&&r.especie===esp&&r.area==='ZCIQ';});
+    renderEspLineCharts(lid,lsub);
+  }
+}
+
+function renderEspLineCharts(lid,lsub){
+  ddKgIqf('dd_'+lid+'_kg', lid+'_kg', lsub);
+  ddLine('dd_'+lid+'_rd', lid+'_rd', lsub, function(r){return r.personas;}, 'Personas','rgba(168,85,247,.8)',false);
+  ddLine('dd_'+lid+'_kh', lid+'_kh', lsub, function(r){return r.kg_h_pers;}, 'Kg/H/Persona','#84cc16',false);
+  ddTurno('dd_'+lid+'_tu', lid+'_tu', lsub);
+}
+
+
+function buildS3Lines(pd){
+  var lines=[...new Set(pd.map(function(r){return r.linea;}).filter(function(l){return ZENV_L.includes(l);}))].sort();
+  var container=el('s3Lines'); if(!container)return;
+  var html='';
+  lines.forEach(function(l,i){
+    var sub=pd.filter(function(r){return r.linea===l;});
+    var ton=sub.reduce(function(a,r){return a+r.ton_real;},0);
+    var cajas=sub.reduce(function(a,r){return a+r.cajas;},0);
+    var bpmArr=sub.filter(function(r){return r.bpm_total>0;}).map(function(r){return r.bpm_total;});
+    var bpm=bpmArr.length?bpmArr.reduce(function(a,b){return a+b;})/bpmArr.length:0;
+    var bpmSArr=sub.filter(function(r){return r.bpm_std>0;}).map(function(r){return r.bpm_std;});
+    var bpmS=bpmSArr.length?bpmSArr.reduce(function(a,b){return a+b;})/bpmSArr.length:0;
+    var lMCaj=sub.reduce(function(a,r){return a+Math.max(0,r.con_cajas-r.teo_cajas);},0);
+    var lMBol=sub.reduce(function(a,r){return a+Math.max(0,r.con_bolsas-r.teo_bolsas);},0);
+    var lTeoCaj=sub.reduce(function(a,r){return a+r.teo_cajas;},0);
+    var lTeoBol=sub.reduce(function(a,r){return a+r.teo_bolsas;},0);
+    var lMCajPct=lTeoCaj>0?(lMCaj/lTeoCaj*100):0;
+    var lMBolPct=lTeoBol>0?(lMBol/lTeoBol*100):0;
+    var lProgCajas=PROG.reduce(function(a,r){return a+r.cajas_prog;},0);
+    var lPctCump=lProgCajas>0?(cajas/lProgCajas*100):0;
+    var lcc=lPctCump>=100?'var(--grn)':lPctCump>=85?'var(--amb)':'var(--red)';
+    var col=LINE_COLS[i%LINE_COLS.length];
+    var esps=[...new Set(sub.map(function(r){return r.especie;}).filter(Boolean))].sort();
+    var espOpts='<option value="">Todas ('+esps.length+')</option>'+esps.map(function(e){return'<option value="'+e+'">'+e+'</option>';}).join('');
+    html+='<div class="linegrp" id="s3g_'+l+'" data-line="'+l+'" data-pfx="s3">'+
+      '<div class="lghead" onclick="toggleLG(this)">'+
+        '<div class="lgh-dot" style="background:'+col+'"></div>'+
+        '<span class="lgh-title">'+(LMAP[l]||l)+'</span>'+
+        '<span class="lgh-stats">Ton: '+ton.toFixed(1)+' · Cajas: '+fmtK(cajas)+' · B/Min: '+bpm.toFixed(1)+'/'+bpmS.toFixed(1)+' std</span>'+
+        '<span class="lgh-arrow">▼</span>'+
+      '</div>'+
+      '<div class="lgbody">'+
+        '<div class="lkpis">'+
+          '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn)">'+ton.toFixed(1)+'</div><div class="lksub">toneladas</div></div>'+
+          '<div class="lk"><div class="lklbl">Cajas Producidas</div><div class="lkval" style="color:var(--acc2)">'+fmtK(cajas)+'</div><div class="lksub">unidades</div></div>'+
+          (lProgCajas>0?'<div class="lk"><div class="lklbl">Cajas Prog.</div><div class="lkval" style="color:var(--acc2)">'+fmtK(lProgCajas)+'</div></div>':'')+ 
+          (lProgCajas>0?'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+lcc+'">'+lPctCump.toFixed(1)+'%</div></div>':'')+
+          '<div class="lk"><div class="lklbl">B/Min Real</div><div class="lkval" style="color:var(--amb)">'+bpm.toFixed(1)+'</div><div class="lksub">bolsas/min</div></div>'+
+          '<div class="lk"><div class="lklbl">B/Min Std</div><div class="lkval" style="color:var(--mut)">'+bpmS.toFixed(1)+'</div></div>'+
+          '<div class="lk"><div class="lklbl">Merma Cajas</div><div class="lkval" style="color:var(--red)">'+lMCajPct.toFixed(1)+'%</div><div class="lksub">'+fmt(lMCaj)+' und</div></div>'+
+          '<div class="lk"><div class="lklbl">Merma Bolsas</div><div class="lkval" style="color:var(--amb)">'+lMBolPct.toFixed(1)+'%</div><div class="lksub">'+fmt(lMBol)+' und</div></div>'+
+        '</div>'+
+        
+        // Especie columns inside this line
+        '<div class="slbl" style="margin-top:14px;">Especies procesadas en '+(LMAP[l]||l)+'</div>'+
+        '<div id="s3l'+l+'_especies"></div>'+
+      '</div>'+
+    '</div>';
+  });
+  container.innerHTML=html;
+  if(!window._PC) window._PC={};
+  lines.forEach(function(l){window._PC['s3g_'+l]=pd;});
+}
+
+
+function renderLineS3(l,pd){
+  var espFilt=sv('esp3_'+l);
+  var sub=espFilt?pd.filter(function(r){return r.linea===l&&r.especie===espFilt;}):pd.filter(function(r){return r.linea===l;});
+  var prefix='s3l'+l;
+  // All charts with drill-down
+  ddBar('dd_'+prefix+'bpm', prefix+'bpm', sub,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    mkLine(id,ddd.labels,[
+      {label:'B/Min Real',data:ddd.avgFn(function(r){return r.bpm_total;}),borderColor:C.cyn,backgroundColor:'rgba(6,182,212,.07)',fill:true,tension:0.3,pointRadius:ddd.level==='dia'?2:4,spanGaps:true},
+      {label:'B/Min Std', data:ddd.avgFn(function(r){return r.bpm_std;}), borderColor:C.amb,borderDash:[4,3],backgroundColor:'transparent',tension:0.3,pointRadius:ddd.level==='dia'?2:4,spanGaps:true}
+    ]);
+  });
+  ddBar('dd_'+prefix+'caj', prefix+'caj', sub,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    var cajD=ddd.sumFn(function(s){return Math.round(s.reduce(function(a,r){return a+r.cajas;},0));});
+    var progD=ddd.keys.map(function(k){
+      var ps;
+      if(ddd.level==='dia') ps=PROG.filter(function(r){return r.fecha===k;});
+      else if(ddd.level==='sem') ps=PROG.filter(function(r){var d=new Date(r.fecha+'T00:00:00');var j=new Date(d.getFullYear(),0,1);return String(Math.ceil((((d-j)/86400000)+j.getDay()+1)/7))===k;});
+      else{var p=k.split('/');ps=PROG.filter(function(r){var d=new Date(r.fecha+'T00:00:00');return d.getFullYear()==+p[0]&&(d.getMonth()+1)==+p[1];});}
+      return Math.round(ps.reduce(function(a,r){return a+r.cajas_prog;},0));
+    });
+    var cumpD=cajD.map(function(c,i){return progD[i]>0?+(c/progD[i]*100).toFixed(1):null;});
+    var hasProg=progD.some(function(v){return v>0;});
+    var ds=[{type:'bar',label:'Cajas Prod.',data:cajD,backgroundColor:'rgba(6,182,212,.6)',borderRadius:2,yAxisID:'y',order:2}];
+    if(hasProg){
+      ds.push({type:'bar',label:'Cajas Prog.',data:progD,backgroundColor:'rgba(245,158,11,.35)',borderColor:'rgba(245,158,11,.7)',borderWidth:1,borderRadius:2,yAxisID:'y',order:3});
+      ds.push({type:'line',label:'Cumpl.%',data:cumpD,borderColor:C.grn,backgroundColor:'transparent',pointRadius:2,spanGaps:true,tension:0.2,yAxisID:'y2',borderWidth:2,order:1,pointBackgroundColor:cumpD.map(function(v){return v==null?'transparent':v>=100?C.grn:v>=85?C.amb:C.red;})});
+    }
+    dx(id);CH[id]=new Chart(el(id),{data:{labels:ddd.labels,datasets:ds},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:5}},
+          tooltip:{mode:'index',callbacks:{label:function(ctx){if(!ctx||ctx.raw==null)return null;return ctx.dataset.label==='Cumpl.%'?' Cumpl: '+ctx.raw+'%':' '+ctx.dataset.label+': '+fmt(ctx.raw)+' cajas';}}}},
+        scales:{x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:20,maxRotation:35}},
+                y:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return fmtK(v);}}},
+                y2:{position:'right',min:0,max:150,grid:{drawOnChartArea:false},ticks:{color:C.grn,font:{size:9},callback:function(v){return v+'%';}}}}
+      }
+    });
+  });
+  ddLine('dd_'+prefix+'kh', prefix+'kh', sub, function(r){return r.kg_h_pers;}, 'Kg/H/Persona','#84cc16',false);
+  ddLine('dd_'+prefix+'esp', prefix+'esp', sub, function(r){return r.personas;}, 'Personas','rgba(168,85,247,.8)',false);
+}
+
+function toggleLG(hd){
+  hd.classList.toggle('open');
+  var body=hd.nextElementSibling; body.classList.toggle('open');
+  if(hd.classList.contains('open')){
+    var grp=hd.closest('.linegrp');
+    var l=grp.dataset.line; var pfx=grp.dataset.pfx;
+    var cached=window._PC&&window._PC[grp.id];
+    if(pfx==='s2'){
+      renderLineS2(l,cached||PROD.filter(function(r){return r.area==='ZCIQ';}));
+    } else {
+      var fullPd=cached||PROD.filter(function(r){return r.area==='ZENV';});
+      renderLineS3(l,fullPd);
+      buildS3EspCols(l,fullPd.filter(function(r){return r.linea===l;}));
+    }
+  }
+}
+
+function reRenderLine(l,pfx){
+  var grpId=(pfx==='s2'?'s2g_':'s3g_')+l;
+  var cached=window._PC&&window._PC[grpId];
+  if(pfx==='s2'){
+    renderLineS2(l,cached||PROD.filter(function(r){return r.area==='ZCIQ';}));
+  }else{
+    var pd3=cached||PROD.filter(function(r){return r.area==='ZENV';});
+    renderLineS3(l,pd3);
+    buildS3EspCols(l,pd3.filter(function(r){return r.linea===l;}));
+  }
+}
+
+/* ── SKU (ZENV ONLY) ── */
+function buildSkuCharts(){
+  var espFilt=sv('s3SkuEsp');
+  var pd=window._lastS3||PROD.filter(function(r){return r.area==='ZENV';});
+  var sub=espFilt?pd.filter(function(r){return r.especie===espFilt;}):pd;
+  var skuMap={};
+  sub.forEach(function(r){
+    if(!r.sku)return;
+    if(!skuMap[r.sku])skuMap[r.sku]={ton:0,cajas:0,n:0,mCaj:0,mBol:0,teoC:0,teoB:0};
+    skuMap[r.sku].ton   +=r.ton_real;
+    skuMap[r.sku].cajas +=r.cajas;
+    skuMap[r.sku].n++;
+    skuMap[r.sku].mCaj  +=Math.max(0,r.con_cajas-r.teo_cajas);
+    skuMap[r.sku].mBol  +=Math.max(0,r.con_bolsas-r.teo_bolsas);
+    skuMap[r.sku].teoC  +=r.teo_cajas;
+    skuMap[r.sku].teoB  +=r.teo_bolsas;
+  });
+  var sorted=Object.entries(skuMap).sort(function(a,b){return b[1].ton-a[1].ton;}).slice(0,15);
+  if(!sorted.length)return;
+  var labels=sorted.map(function(e){return e[0].length>26?e[0].slice(0,24)+'…':e[0];});
+
+  /* Toneladas chart */
+  dx('s3SkuBar');
+  if(el('s3SkuBar')){
+    CH['s3SkuBar']=new Chart(el('s3SkuBar'),{type:'bar',
+      data:{labels:labels,datasets:[{
+        label:'Toneladas',
+        data:sorted.map(function(e){return+e[1].ton.toFixed(2);}),
+        backgroundColor:sorted.map(function(_,i){return LINE_COLS[i%LINE_COLS.length]+'bb';}),
+        borderColor:sorted.map(function(_,i){return LINE_COLS[i%LINE_COLS.length];}),
+        borderWidth:1,borderRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:function(ctx){return ' '+ctx.raw.toFixed(2)+' ton';},
+            afterLabel:function(ctx){
+              if(!sorted[ctx.dataIndex])return[];
+              var d=sorted[ctx.dataIndex][1];
+              return[' Cajas: '+fmt(d.cajas),' M.Cajas: '+fmt(d.mCaj),' M.Bolsas: '+fmt(d.mBol)];
+            }}}},
+        scales:{
+          x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9}}},
+          y:{grid:{color:C.grid},ticks:{color:'rgba(255,255,255,.85)',font:{size:9}}}
+        }}});
+  }
+
+  /* Cajas chart */
+  var sortedCajas=Object.entries(skuMap).sort(function(a,b){return b[1].cajas-a[1].cajas;}).slice(0,15);
+  var labCaj=sortedCajas.map(function(e){return e[0].length>26?e[0].slice(0,24)+'…':e[0];});
+  dx('s3SkuCajas');
+  if(el('s3SkuCajas')){
+    CH['s3SkuCajas']=new Chart(el('s3SkuCajas'),{type:'bar',
+      data:{labels:labCaj,datasets:[{
+        label:'Cajas',
+        data:sortedCajas.map(function(e){return Math.round(e[1].cajas);}),
+        backgroundColor:'rgba(6,182,212,.65)',borderRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:function(ctx){return ' '+fmt(ctx.raw)+' cajas';},
+            afterLabel:function(ctx){
+              if(!sortedCajas[ctx.dataIndex])return[];
+              var d=sortedCajas[ctx.dataIndex][1];
+              return[' Ton.: '+d.ton.toFixed(2),' M.Cajas: '+fmt(d.mCaj),' M.Bolsas: '+fmt(d.mBol)];
+            }}}},
+        scales:{
+          x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return fmtK(v);}}},
+          y:{grid:{color:C.grid},ticks:{color:'rgba(255,255,255,.85)',font:{size:9}}}
+        }}});
+  }
+
+  /* Table with merma columns */
+  var tEl=el('s3SkuTable'); if(!tEl)return;
+  tEl.innerHTML=
+    '<table><thead><tr>'+
+      '<th>SKU</th>'+
+      '<th>Ton.</th>'+
+      '<th>Cajas</th>'+
+      '<th style="color:#fca5a5">Merma Cajas</th>'+
+      '<th style="color:#fca5a5">Merma Cajas %</th>'+
+      '<th style="color:#fcd34d">Merma Bolsas</th>'+
+      '<th style="color:#fcd34d">Merma Bolsas %</th>'+
+      '<th style="color:#60a5fa">Cajas Prog.</th>'+
+      '<th style="color:#22c55e">Cumpl. %</th>'+
+    '</tr></thead><tbody>'+
+    sorted.map(function(e){
+      var d=e[1];
+      var pctMC=d.teoC>0?(d.mCaj/d.teoC*100):0;
+      var pctMB=d.teoB>0?(d.mBol/d.teoB*100):0;
+      // Find programadas for this SKU
+      var skuProg=PROG.filter(function(r){return r.sku===e[0] || r.sku.indexOf(e[0])>=0;})
+                      .reduce(function(a,r){return a+r.cajas_prog;},0);
+      var skuCump=skuProg>0?(d.cajas/skuProg*100):null;
+      var ccump=skuCump==null?'var(--mut)':skuCump>=100?'var(--grn)':skuCump>=85?'var(--amb)':'var(--red)';
+      return '<tr>'+
+        '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="'+e[0]+'">'+e[0]+'</td>'+
+        '<td style="font-family:var(--mono);color:var(--grn)">'+d.ton.toFixed(1)+'</td>'+
+        '<td style="font-family:var(--mono)">'+fmt(d.cajas)+'</td>'+
+        '<td style="font-family:var(--mono);color:#fca5a5">'+fmt(d.mCaj)+'</td>'+
+        '<td style="font-family:var(--mono);color:#fca5a5">'+pctMC.toFixed(1)+'%</td>'+
+        '<td style="font-family:var(--mono);color:#fcd34d">'+fmt(d.mBol)+'</td>'+
+        '<td style="font-family:var(--mono);color:#fcd34d">'+pctMB.toFixed(1)+'%</td>'+
+        '<td style="font-family:var(--mono);color:#60a5fa">'+(skuProg>0?fmt(skuProg):'—')+'</td>'+
+        '<td style="font-family:var(--mono);color:'+ccump+'">'+(skuCump!=null?skuCump.toFixed(1)+'%':'—')+'</td>'+
+      '</tr>';
+    }).join('')+
+    '</tbody></table>';
+
+  // ── Merma Cajas bar chart by SKU ─────────────────────────────────────
+  // Merma Cajas % by SKU — sort by % (mCaj/teoC)
+  var sortedMCaj=Object.entries(skuMap).filter(function(e){return e[1].mCaj>0&&e[1].teoC>0;})
+    .map(function(e){return[e[0],e[1],+(e[1].mCaj/e[1].teoC*100).toFixed(2)];})
+    .sort(function(a,b){return b[2]-a[2];}).slice(0,15);
+  dx('s3SkuMCaj');
+  if(el('s3SkuMCaj')&&sortedMCaj.length){
+    CH['s3SkuMCaj']=new Chart(el('s3SkuMCaj'),{type:'bar',
+      data:{labels:sortedMCaj.map(function(e){return e[0].length>24?e[0].slice(0,22)+'…':e[0];}),
+        datasets:[{label:'% Merma Cajas',
+          data:sortedMCaj.map(function(e){return e[2];}),
+          backgroundColor:sortedMCaj.map(function(e){return e[2]>=3?'rgba(239,68,68,.8)':e[2]>=1?'rgba(239,68,68,.55)':'rgba(239,68,68,.35)';}),
+          borderRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:function(ctx){return ' '+ctx.raw.toFixed(2)+'% merma';},
+            afterLabel:function(ctx){
+              if(!sortedMCaj[ctx.dataIndex])return'';
+              var d=sortedMCaj[ctx.dataIndex][1];
+              return ' ('+fmt(d.mCaj)+' und de '+fmt(d.teoC)+' teórico)';
+            }}}},
+        scales:{
+          x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return v+'%';}}},
+          y:{grid:{color:C.grid},ticks:{color:'rgba(255,255,255,.85)',font:{size:9}}}
+        }}});
+  }
+
+  // Merma Bolsas % by SKU
+  var sortedMBol=Object.entries(skuMap).filter(function(e){return e[1].mBol>0&&e[1].teoB>0;})
+    .map(function(e){return[e[0],e[1],+(e[1].mBol/e[1].teoB*100).toFixed(2)];})
+    .sort(function(a,b){return b[2]-a[2];}).slice(0,15);
+  dx('s3SkuMBol');
+  if(el('s3SkuMBol')&&sortedMBol.length){
+    CH['s3SkuMBol']=new Chart(el('s3SkuMBol'),{type:'bar',
+      data:{labels:sortedMBol.map(function(e){return e[0].length>24?e[0].slice(0,22)+'…':e[0];}),
+        datasets:[{label:'% Merma Bolsas',
+          data:sortedMBol.map(function(e){return e[2];}),
+          backgroundColor:sortedMBol.map(function(e){return e[2]>=8?'rgba(245,158,11,.8)':e[2]>=4?'rgba(245,158,11,.55)':'rgba(245,158,11,.35)';}),
+          borderRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:function(ctx){return ' '+ctx.raw.toFixed(2)+'% merma';},
+            afterLabel:function(ctx){
+              if(!sortedMBol[ctx.dataIndex])return'';
+              var d=sortedMBol[ctx.dataIndex][1];
+              return ' ('+fmt(d.mBol)+' und de '+fmt(d.teoB)+' teórico)';
+            }}}},
+        scales:{
+          x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return v+'%';}}},
+          y:{grid:{color:C.grid},ticks:{color:'rgba(255,255,255,.85)',font:{size:9}}}
+        }}});
+  }
+}
+
+
+/* ── TOP 3 TABLES ── */
+function buildTbls2(pd){
+  var especies=[...new Set(pd.map(function(r){return r.especie;}).filter(Boolean))].sort();
+  var html='';
+  especies.forEach(function(esp){
+    var sub=pd.filter(function(r){return r.especie===esp;});
+    var byDay={};
+    sub.forEach(function(r){
+      if(!byDay[r.fecha])byDay[r.fecha]={kgIn:0,kgAp:0};
+      byDay[r.fecha].kgIn+=r.kg_ingresados;byDay[r.fecha].kgAp+=r.iqf_aprobado;});
+    var top=Object.entries(byDay).sort(function(a,b){return b[1].kgIn-a[1].kgIn;}).slice(0,3);
+    if(!top.length)return;
+    var col=ESP_COLS[esp]||C.acc2;
+    html+='<div class="tcard"><div class="thd" style="background:'+col+'22;border-left:3px solid '+col+'"><span class="tht">'+(ESP_ICONS[esp]||'')+' '+esp+'</span><span class="thc">Top 3</span></div>'+
+      '<table><thead><tr><th>Fecha</th><th>Kg Ingr.</th><th>IQF Ap.</th><th>Rend.%</th></tr></thead><tbody>'+
+      top.map(function(e){var rend=e[1].kgIn>0?(e[1].kgAp/e[1].kgIn*100):0;
+        var rc=rend>=90?C.grn:rend>=80?C.amb:C.red;
+        return'<tr><td style="white-space:nowrap">'+e[0]+'</td>'+
+          '<td style="font-family:var(--mono)">'+fmtK(e[1].kgIn)+'</td>'+
+          '<td style="font-family:var(--mono)">'+fmtK(e[1].kgAp)+'</td>'+
+          '<td style="font-family:var(--mono);color:'+rc+'">'+rend.toFixed(1)+'%</td></tr>';}).join('')+
+      '</tbody></table></div>';
+  });
+  // Also add Top 3 by Line
+  var htmlLine='';
+  var lines2=[...new Set(pd.map(function(r){return r.linea;}).filter(function(l){return ZCIQ_L.includes(l);}))].sort();
+  lines2.forEach(function(l){
+    var sub=pd.filter(function(r){return r.linea===l;});
+    var byDay={};
+    sub.forEach(function(r){
+      if(!byDay[r.fecha])byDay[r.fecha]={kgIn:0,kgAp:0};
+      byDay[r.fecha].kgIn+=r.kg_ingresados;byDay[r.fecha].kgAp+=r.iqf_aprobado;});
+    var top=Object.entries(byDay).sort(function(a,b){return b[1].kgIn-a[1].kgIn;}).slice(0,3);
+    if(!top.length)return;
+    var lc=LINE_COLS[lines2.indexOf(l)%LINE_COLS.length];
+    htmlLine+='<div class="tcard"><div class="thd" style="border-left:3px solid '+lc+'"><span class="tht">'+(LMAP[l]||l)+'</span><span class="thc">Top 3</span></div>'+
+      '<table><thead><tr><th>Fecha</th><th>Kg Ingr.</th><th>IQF Ap.</th><th>Rend.%</th></tr></thead><tbody>'+
+      top.map(function(e){var rend=e[1].kgIn>0?(e[1].kgAp/e[1].kgIn*100):0;var rc=rend>=90?C.grn:rend>=80?C.amb:C.red;
+        return'<tr><td style="white-space:nowrap">'+e[0]+'</td>'+
+          '<td style="font-family:var(--mono)">'+fmtK(e[1].kgIn)+'</td>'+
+          '<td style="font-family:var(--mono)">'+fmtK(e[1].kgAp)+'</td>'+
+          '<td style="font-family:var(--mono);color:'+rc+'">'+rend.toFixed(1)+'%</td></tr>';}).join('')+
+      '</tbody></table></div>';
+  });
+  var tEl=el('s2Tbls');
+  if(tEl){
+    tEl.innerHTML=(html||htmlLine)?
+      '<div class="tbl-outer">'+html+htmlLine+'</div>':
+      '<span style="color:var(--mut)">Sin datos</span>';
+  }
+}
+function buildTbls3(pd){
+  var byDay={};
+  pd.forEach(function(r){
+    if(!byDay[r.fecha])byDay[r.fecha]={ton:0,cajas:0,esp:r.especie};
+    byDay[r.fecha].ton+=r.ton_real;byDay[r.fecha].cajas+=r.cajas;});
+  var top=Object.entries(byDay).sort(function(a,b){return b[1].ton-a[1].ton;}).slice(0,3);
+  var tEl=el('s3Tbls'); if(!tEl)return;
+  tEl.innerHTML=top.length?'<div class="tcard" style="grid-column:1/-1"><div class="thd">'+
+    '<span class="tht">Envasado</span><span class="thc">Top 3</span></div>'+
+    '<table><thead><tr><th>Fecha</th><th>Especie</th><th>Ton.</th><th>Cajas</th></tr></thead><tbody>'+
+    top.map(function(e){return'<tr><td style="white-space:nowrap">'+e[0]+'</td>'+
+      '<td>'+e[1].esp+'</td>'+
+      '<td style="font-family:var(--mono);color:var(--grn)">'+e[1].ton.toFixed(2)+'</td>'+
+      '<td style="font-family:var(--mono)">'+fmt(e[1].cajas)+'</td></tr>';}).join('')+
+    '</tbody></table></div>':'<span style="color:var(--mut)">Sin datos</span>';
+}
+
+/* ── MAIN UPDATE ── */
+function updateArea(pfx){
+  var area=pfx==='s2'?'ZCIQ':'ZENV';
+  var lines=pfx==='s2'?ZCIQ_L:ZENV_L;
+  var o=getOpts(pfx,area); var pd=fp(o);
+  if(pfx==='s2'){
+    buildKpiS2(pd); buildS2Charts(pd); buildS2Lines(pd); buildTbls2(pd);
+  } else {
+    buildKpiS3(pd); buildS3Charts(pd); buildS3Lines(pd); buildTbls3(pd);
+    try{window._lastS3=pd;}catch(e){}
+    var esps=[...new Set(pd.map(function(r){return r.especie;}).filter(Boolean))].sort();
+    var skEl=el('s3SkuEsp');
+    if(skEl){skEl.innerHTML='<option value="">Todas</option>'+esps.map(function(e){return'<option value="'+e+'">'+e+'</option>';}).join('');}
+    buildSkuCharts();
+  }
+  updPills(pfx);
+}
+
+function resetArea(pfx){
+  [pfx+'A',pfx+'M',pfx+'S',pfx+'D',pfx+'Tu',pfx+'Esp','s2L','s3SkuEsp'].forEach(function(id){
+    var e=el(id);if(e)e.value='';
+  });
+  updateArea(pfx);
+  var p=el('fbarPills'+pfx.slice(-1));if(p)p.innerHTML='';
+}
+
+/* ── EXCEL UPLOAD — unified handler ── */
+el('fi').addEventListener('change', function(e){
+  var f = e.target.files[0]; if(!f) return;
+  // Guard against double-fire
+  if(window._loadingExcel) return;
+  window._loadingExcel = true;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      var wb = XLSX.read(ev.target.result, {type:'array'});
+
+      // ── Sheet detection ──────────────────────────────────────────────
+      var shTP = wb.SheetNames.find(function(s){
+        return s.toLowerCase().includes('tiempos')||s.toLowerCase().includes('perdid');
+      });
+      var shAP = wb.SheetNames.find(function(s){
+        return s.toLowerCase().includes('asistencia')||s.toLowerCase().includes('produccion');
+      }) || wb.SheetNames[0];
+
+      // ── Parse Tiempos Perdidos (PD) ──────────────────────────────────
+      if(shTP){
+        PD = XLSX.utils.sheet_to_json(wb.Sheets[shTP],{defval:''}).map(function(r){
+          var fs = r['Fecha'] ? (typeof r['Fecha']==='number' ?
+            new Date(Math.round((r['Fecha']-25569)*86400*1000)).toISOString().slice(0,10) :
+            String(r['Fecha']).slice(0,10)) : '';
+          var _p=fs?fs.split('-'):[0,0,0];
+          return {
+            fecha:fs, año:fs?+_p[0]:0, mes:fs?+_p[1]:0,
+            dia:fs?+_p[2]:0, semana:+r['Semana']||0, turno:+r['Turno']||1,
+            linea:String(r['Pto. Trabajo']||''),
+            area:String(r['Clase de Orden']||'ZCIQ'),
+            tipo_paro:String(r['Tipo de Paro']||''),
+            categoria:String(r['Desc.Clasifi. del Paro']||'Producción'),
+            falla:String(r['Desc.Falla']||'SIN DESCRIPCIÓN'),
+            obs:String(r['Observaciones']||''),
+            minutos:+r['T.Minutos']||0
+          };
+        }).filter(function(r){return r.fecha && r.fecha.length===10;});
+      }
+
+      // ── Parse Asistencia + Producción (PROD + TD) ────────────────────
+      if(shAP){
+        var rows = XLSX.utils.sheet_to_json(wb.Sheets[shAP],{defval:''});
+
+        // Production data
+        PROD = rows.map(function(row){
+          var fs = row['Inic.tratamiento'] ? (typeof row['Inic.tratamiento']==='number' ?
+            new Date(Math.round((row['Inic.tratamiento']-25569)*86400*1000)).toISOString().slice(0,10) :
+            String(row['Inic.tratamiento']).slice(0,10)) : '';
+          var _p3=fs?fs.split('-'):[0,0,0];
+          var n = function(k){return +row[k]||0;};
+          return {
+            fecha:fs, año:fs?+_p3[0]:0, mes:fs?+_p3[1]:0,
+            dia:fs?+_p3[2]:0, semana:+row['Semana']||0, turno:+row['Turno']||0,
+            linea:String(row['Pto. Trabajo']||''),
+            area:String(row['Pto. Trabajo']||'')==='S_ENV1'?'ZENV':'ZCIQ',
+            especie:String(row['Especie']||''), sku:String(row['Desc.Material']||''),
+            teo_min:n('T.Minutos'), efec_min:n('Tiempo Efec.Min.'),
+            plan_min:n('Paros Plan Min.'), nopl_min:n('Paros No Plan Min.'),
+            kg_ingresados:n('Kilos Ingresados'), iqf_aprobado:n('IQF Aprobado'),
+            kg_puro:n('Kilos Pure'), kg_jugo:n('Kilos Jugo'), kg_crumble:n('Kilos Crumble'),
+            ton_real:n('Ton.Real'), cajas:n('Cajas Produc.'), kg_aprobadas:n('Kilos Aprobadas'),
+            teo_cajas:n('Teorico Cajas'), con_cajas:n('Consumo Cajas'),
+            teo_bolsas:n('Teorico Bolsas'), con_bolsas:n('Consumo Bolsas'),
+            bpm_total:n('BPM Total'), bpm_std:n('BPM Estandar'), bpm_sinpp:n('BPM sin PP'),
+            personas:n('Cant.Personas'), kg_h_pers:n('Produc.(Kg/H/Personas)')
+          };
+        }).filter(function(r){return r.fecha && r.fecha.length===10;});
+
+        // Teórico data (TD) — from same sheet
+        TD = rows.map(function(row){
+          var fs = row['Inic.tratamiento'] ? (typeof row['Inic.tratamiento']==='number' ?
+            new Date(Math.round((row['Inic.tratamiento']-25569)*86400*1000)).toISOString().slice(0,10) :
+            String(row['Inic.tratamiento']).slice(0,10)) : '';
+          var _p=fs?fs.split('-'):[0,0,0];
+          return {
+            fecha:fs, año:fs?+_p[0]:0, mes:fs?+_p[1]:0,
+            dia:fs?+_p[2]:0, semana:+row['Semana']||0,
+            linea:String(row['Pto. Trabajo']||''),
+            minutos:+row['T.Minutos']||0,
+            efec_min:+row['Tiempo Efec.Min.']||0,
+            plan_min:+row['Paros Plan Min.']||0,
+            nopl_min:+row['Paros No Plan Min.']||0
+          };
+        }).filter(function(r){return r.fecha && r.fecha.length===10;});
+      }
+
+      // ── Rebuild indices for TP cascade filters ───────────────────────
+      (function(){
+        // Build area-specific AND global indices
+        var MS={},MD={},SD={};
+        var MSZ={},MDZ={},SDZ={},MSE={},MDE={},SDE={};
+        PD.forEach(function(r){
+          var mk=String(r.mes), sk=String(r.semana);
+          function addTo(obj,key,val){if(!obj[key])obj[key]=[];if(obj[key].indexOf(val)<0)obj[key].push(val);}
+          addTo(MS,mk,r.semana); addTo(MD,mk,r.dia); addTo(SD,sk,r.dia);
+          if(ZCIQ_L.includes(r.linea)){addTo(MSZ,mk,r.semana);addTo(MDZ,mk,r.dia);addTo(SDZ,sk,r.dia);}
+          if(ZENV_L.includes(r.linea)){addTo(MSE,mk,r.semana);addTo(MDE,mk,r.dia);addTo(SDE,sk,r.dia);}
+        });
+        [MS,MD,SD,MSZ,MDZ,SDZ,MSE,MDE,SDE].forEach(function(obj){
+          Object.keys(obj).forEach(function(k){obj[k].sort(function(a,b){return a-b;});});
+        });
+        IDX_TP = {
+          MS:MS, MD:MD, SD:SD,
+          MS_ZCIQ:MSZ, MD_ZCIQ:MDZ, SD_ZCIQ:SDZ,
+          MS_ZENV:MSE, MD_ZENV:MDE, SD_ZENV:SDE
+        };
+      })();
+
+      // ── Parse Programa Envasado if sheet exists ──────────────────────
+      var shProg = wb.SheetNames.find(function(s){
+        return s.toLowerCase().includes('programa');
+      });
+      if(shProg){
+        try{
+          // Sheet structure: row0=turno numbers, row1=headers(Cód,SKU,PesoCj,dates...), row2+=data
+          var ws = wb.Sheets[shProg];
+          var raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+          if(raw.length >= 3){
+            var turnoRow = raw[0];   // [null,null,'Turno',3,1,2,3,1,2,...]
+            var dateRow  = raw[1];   // [null,null,null, date,date,date,...]
+            var newProg  = [];
+            for(var ri=2; ri<raw.length; ri++){
+              var row = raw[ri];
+              if(!row || !row[0]) continue;
+              var cod = String(row[0]||'');
+              var sku = String(row[1]||'');
+              if(!sku) continue;
+              for(var ci=3; ci<dateRow.length; ci++){
+                var val = row[ci];
+                if(!val || isNaN(+val) || +val<=0) continue;
+                var dateVal = dateRow[ci];
+                if(!dateVal) continue;
+                var fecha;
+                if(typeof dateVal==='number'){
+                  fecha=new Date(Math.round((dateVal-25569)*86400*1000)).toISOString().slice(0,10);
+                } else {
+                  fecha=String(dateVal).slice(0,10);
+                }
+                if(!fecha||fecha.length<10) continue;
+                var turno = turnoRow[ci]?+turnoRow[ci]:0;
+                newProg.push({fecha:fecha, sku:sku, cod:cod, turno:turno, cajas_prog:+val});
+              }
+            }
+            if(newProg.length>0){
+              PROG=newProg;
+              console.log('Programa Envasado: '+newProg.length+' registros cargados');
+            }
+          }
+        }catch(ep){console.warn('Programa Envasado parse error:',ep.message);}
+      }
+
+      el('srcLbl').textContent = f.name;
+
+      // ── Refresh filter dropdowns ──────────────────────────────────────
+      try{popArea('s2','ZCIQ',ZCIQ_L);}catch(e){}
+      try{popArea('s3','ZENV',ZENV_L);}catch(e){}
+      try{popAreaTP('tp2','ZCIQ');}catch(e){}
+      try{popAreaTP('tp3','ZENV');}catch(e){}
+
+      // ── Refresh whichever screen is currently visible ─────────────────
+      var active = ['s0','s2','s3','tp2','tp3'].find(function(id){
+        var el2=el(id); return el2 && el2.classList.contains('on');
+      });
+      if(active==='s0')  updateHomeKpis();
+      if(active==='s2')  updateArea('s2');
+      if(active==='s3')  updateArea('s3');
+      if(active==='tp2') updateAreaTP('tp2','ZCIQ',ZCIQ_L);
+      if(active==='tp3') updateAreaTP('tp3','ZENV',ZENV_L);
+
+      // Reset file input so same file can be reloaded if needed
+      e.target.value = '';
+      window._loadingExcel = false;
+
+      alert('✅ ' + f.name + ' cargado\n' + PROD.length + ' registros producción · ' + PD.length + ' eventos TP');
+    } catch(err){
+      window._loadingExcel = false;
+      alert('❌ Error cargando Excel: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(f);
+});
+/* ── FILTER EVENTS ── */
+function setupF(pfx,area,lines){
+  var upd=function(){updateArea(pfx);};
+  var mEl=el(pfx+'M'), sEl=el(pfx+'S');
+  var msKey='MS_'+(pfx==='s2'?'ZCIQ':'ZENV');
+  var sdKey='SD_'+(pfx==='s2'?'ZCIQ':'ZENV');
+  if(mEl)mEl.addEventListener('change',function(){cascMS(pfx,msKey);upd();});
+  if(sEl)sEl.addEventListener('change',function(){cascSD(pfx,sdKey);upd();});
+  // Wire all filters including linea (s2L) and especie/SKU (s3SkuEsp)
+  [pfx+'A',pfx+'D',pfx+'Tu',pfx+'Esp','s2L','s3SkuEsp'].forEach(function(id){
+    var e=el(id); if(e)e.addEventListener('change',upd);});
+}
+
+/* ── DRILL-DOWN ENGINE ─────────────────────────────────────────────────── */
+// State: {chartId: {level:'mes'|'sem'|'dia', context:{mes,sem}}}
+var DD={};
+
+function ddGetData(pd, level, ctx){
+  // Returns {labels, keys, fn_sum, fn_avg} for the given level and context
+  if(level==='mes'){
+    var mk=getMonthKeys(pd);
+    return{keys:mk.keys,labels:mk.labels,
+      sumFn:function(fn){return sumMon(pd,mk.keys,fn);},
+      avgFn:function(fn){return avgMon(pd,mk.keys,fn);}};
+  }
+  if(level==='sem'){
+    // Filter to context mes if set
+    var sub=ctx&&ctx.mes?pd.filter(function(r){return r.mes==ctx.mes;}):pd;
+    var semSet=new Set();
+    sub.forEach(function(r){if(r.semana)semSet.add(r.semana);});
+    var sems=[...semSet].sort(function(a,b){return a-b;});
+    var semKeys=sems.map(function(s){return String(s);});
+    var semLabels=sems.map(function(s){return 'S'+s;});
+    return{keys:semKeys,labels:semLabels,
+      sumFn:function(fn){return semKeys.map(function(sk){return fn(sub.filter(function(r){return String(r.semana)===sk;}));});},
+      avgFn:function(fn){return semKeys.map(function(sk){
+        var s=sub.filter(function(r){return String(r.semana)===sk&&fn(r)!=null&&fn(r)>0;});
+        return s.length?s.reduce(function(a,r){return a+fn(r);},0)/s.length:null;});}};
+  }
+  if(level==='dia'){
+    var sub2=pd;
+    if(ctx&&ctx.mes)  sub2=sub2.filter(function(r){return r.mes==ctx.mes;});
+    if(ctx&&ctx.sem)  sub2=sub2.filter(function(r){return r.semana==ctx.sem;});
+    var dk=getDailyKeys(sub2);
+    return{keys:dk.keys,labels:dk.labels,
+      sumFn:function(fn){return sumDay(sub2,dk.keys,fn);},
+      avgFn:function(fn){return avgDay(sub2,dk.keys,fn);}};
+  }
+}
+
+function ddBar(wrapId, chartId, pd, level, ctx, buildFn){
+  DD[chartId]={level:level,ctx:ctx||{},pd:pd,wrapId:wrapId,buildFn:buildFn};
+  var wrap=el(wrapId); if(!wrap)return;
+  var btns=wrap.querySelector('.dd-bar');
+  if(!btns){btns=document.createElement('div');btns.className='dd-bar';wrap.insertBefore(btns,wrap.firstChild);}
+  var MMAP={1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',7:'Jul',8:'Ago',9:'Sep',10:'Oct',11:'Nov',12:'Dic'};
+  // Build buttons via DOM to avoid string escaping issues
+  btns.innerHTML='<span class="dd-lbl">Nivel:</span>';
+  ['mes','sem','dia'].forEach(function(lv){
+    var b=document.createElement('button');
+    b.className='dd-btn'+(level===lv?' on':'');
+    b.textContent={mes:'📅 Mes',sem:'📆 Semana',dia:'🗓 Día'}[lv];
+    b.setAttribute('data-w',wrapId);
+    b.setAttribute('data-c',chartId);
+    b.setAttribute('data-l',lv);
+    b.addEventListener('click',function(){ddSwitch(this.dataset.w,this.dataset.c,this.dataset.l);});
+    btns.appendChild(b);
+  });
+  if(ctx&&ctx.mes){
+    var sp=document.createElement('span');
+    sp.className='dd-lbl';sp.style.marginLeft='6px';sp.style.color='var(--amb)';
+    sp.textContent='▸ '+(MMAP[ctx.mes]||ctx.mes)+(ctx.sem?' S'+ctx.sem:'');
+    btns.appendChild(sp);
+  }
+  var ddd=ddGetData(pd,level,ctx);
+  ddd.level=level; ddd.ctx=ctx||{};
+  buildFn(chartId,ddd,level,ctx||{});
+}
+
+function ddSwitch(wrapId, chartId, newLevel){
+  var state=DD[chartId]; if(!state)return;
+  ddBar(wrapId,chartId,state.pd,newLevel,state.ctx,state.buildFn);
+}
+
+// ── Standard drill-down bar chart (Kg Ingresados + IQF + Rend% line) ──────
+function ddKgIqf(wrapId, chartId, pd){
+  ddBar(wrapId, chartId, pd, 'mes', {}, function(id, ddd){
+    dx(id); if(!el(id))return;
+    var kgIn=ddd.sumFn(function(s){return Math.round(s.reduce(function(a,r){return a+r.kg_ingresados;},0));});
+    var kgAp=ddd.sumFn(function(s){return Math.round(s.reduce(function(a,r){return a+r.iqf_aprobado;},0));});
+    mkKgIqfChart(id,ddd.labels,kgIn,kgAp);
+  });
+}
+
+// ── Standard drill-down line chart ────────────────────────────────────────
+function ddLine(wrapId, chartId, pd, dataFn, label, color, pct){
+  ddBar(wrapId, chartId, pd, 'mes', {}, function(id, ddd, level){
+    dx(id); if(!el(id))return;
+    var data;
+    if(level==='dia'){
+      data=ddd.avgFn(dataFn);
+    } else {
+      data=ddd.avgFn(dataFn);
+    }
+    var fillColor=color.indexOf('rgba')>=0?color.replace(/[\d.]+\)$/,'0.1)'):color+'22';
+    mkLine(id,ddd.labels,[{label:label,data:data,borderColor:color,
+      backgroundColor:fillColor,fill:true,tension:0.3,
+      pointRadius:level==='dia'?2:4,borderWidth:2,spanGaps:true}],
+      {pct:!!pct,refLine:!!pct});
+  });
+}
+
+// ── Drill-down bar (simple) ───────────────────────────────────────────────
+function ddBarSimple(wrapId, chartId, pd, dataFn, label, color){
+  ddBar(wrapId, chartId, pd, 'mes', {}, function(id, ddd){
+    dx(id); if(!el(id))return;
+    var data=ddd.sumFn(dataFn);
+    mkBar(id,ddd.labels,[{label:label,data:data,
+      backgroundColor:color,borderRadius:3}]);
+  });
+}
+
+// ── Drill-down: Rendimiento IQF% ─────────────────────────────────────────
+function ddRendIqf(wrapId, chartId, pd){
+  ddBar(wrapId, chartId, pd, 'mes', {}, function(id, ddd){
+    dx(id); if(!el(id))return;
+    var data=ddd.keys.map(function(k){
+      var s;
+      if(ddd.level==='dia') s=pd.filter(function(r){return r.fecha===k;});
+      else if(ddd.level==='sem') s=pd.filter(function(r){return String(r.semana)===k;});
+      else{var p=k.split('/');s=pd.filter(function(r){return r.año==+p[0]&&r.mes==+p[1];});}
+      var kg=s.reduce(function(a,r){return a+r.kg_ingresados;},0);
+      var ap=s.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+      return kg>0?+(ap/kg*100).toFixed(1):null;
+    });
+    mkLine(id,ddd.labels,[{label:'Rend.IQF%',data:data,borderColor:C.grn,
+      backgroundColor:'rgba(34,197,94,.07)',fill:true,tension:0.3,
+      pointRadius:ddd.level==='dia'?2:4,borderWidth:2,spanGaps:true,
+      pointBackgroundColor:data.map(function(v){return v==null?'transparent':v>=90?C.grn:v>=80?C.amb:C.red;})}],
+      {pct:true,refLine:true});
+  });
+}
+
+// ── Drill-down: Kg por Turno ──────────────────────────────────────────────
+function ddTurno(wrapId, chartId, pd){
+  ddBar(wrapId, chartId, pd, 'mes', {}, function(id, ddd){
+    dx(id); if(!el(id))return;
+    var turnos=[1,2,3].filter(function(t2){return pd.some(function(r){return r.turno===t2;});});
+    var ds=turnos.map(function(t2,i){
+      var data=ddd.keys.map(function(k){
+        var s;
+        if(ddd.level==='dia') s=pd.filter(function(r){return r.fecha===k&&r.turno===t2;});
+        else if(ddd.level==='sem') s=pd.filter(function(r){return String(r.semana)===k&&r.turno===t2;});
+        else{var p=k.split('/');s=pd.filter(function(r){return r.año==+p[0]&&r.mes==+p[1]&&r.turno===t2;});}
+        var v=Math.round(s.reduce(function(a,r){return a+r.kg_ingresados;},0));
+        return v>0?v:null;
+      });
+      return{label:'Turno '+t2,data:data,
+             backgroundColor:LINE_COLS[i%LINE_COLS.length]+'99',
+             borderColor:LINE_COLS[i%LINE_COLS.length],borderWidth:1,borderRadius:2};
+    }).filter(function(d){return d.data.some(function(v){return v!=null;});});
+    if(!ds.length)return;
+    mkBar(id,ddd.labels,ds);
+  });
+}
+
+
+// ── S3: Especie columns inside each line accordion ──────────────────────
+function buildS3EspCols(l,sub){
+  var container=el('s3l'+l+'_especies'); if(!container)return;
+  var especies=[...new Set(sub.map(function(r){return r.especie;}).filter(Boolean))].sort();
+  if(!especies.length){container.innerHTML='<span style="color:var(--mut)">Sin especies</span>';return;}
+  var cols=Math.min(especies.length,4);
+  var colHtml='';
+  especies.forEach(function(esp,ei){
+    var esub=sub.filter(function(r){return r.especie===esp;});
+    var ton=esub.reduce(function(a,r){return a+r.ton_real;},0);
+    var cajas=esub.reduce(function(a,r){return a+r.cajas;},0);
+    var bpmArr=esub.filter(function(r){return r.bpm_total>0;}).map(function(r){return r.bpm_total;});
+    var bpm=bpmArr.length?bpmArr.reduce(function(a,b){return a+b;})/bpmArr.length:0;
+    var ecol=ESP_COLS[esp]||LINE_COLS[ei%LINE_COLS.length];
+    var eid='s3l'+l+'_esp_'+esp.replace(/[^a-z0-9]/gi,'_');
+    colHtml+=
+      '<div style="border:1px solid var(--brd);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;gap:8px;min-width:0;">'+
+        '<div style="background:'+ecol+'22;border-bottom:1px solid var(--brd);padding:8px 12px;display:flex;align-items:center;gap:8px;">'+
+          '<div style="width:9px;height:9px;border-radius:50%;background:'+ecol+'"></div>'+
+          '<span style="font-size:12px;font-weight:700;color:var(--txt)">'+(ESP_ICONS[esp]||'🌿')+' '+esp+'</span>'+
+        '</div>'+
+        '<div style="padding:0 10px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">'+
+          '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn);font-size:13px">'+ton.toFixed(1)+'</div></div>'+
+          '<div class="lk"><div class="lklbl">Cajas</div><div class="lkval" style="color:var(--acc2);font-size:13px">'+fmtK(cajas)+'</div></div>'+
+          '<div class="lk" style="grid-column:1/-1"><div class="lklbl">B/Min</div><div class="lkval" style="color:var(--amb);font-size:14px">'+bpm.toFixed(1)+'</div></div>'+
+        '</div>'+
+        // SKU filter for this especie
+        (function(){var skus=[...new Set(esub.map(function(r){return r.sku;}).filter(Boolean))].sort();
+          return skus.length?'<div style="padding:0 10px 6px;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--acc2);margin-bottom:3px;">SKU</div>'+
+            '<select style="width:100%;background:rgba(255,255,255,.07);border:1px solid var(--brd);color:var(--txt);padding:4px 7px;border-radius:6px;font-size:10px;font-family:var(--font);" id="sku_'+eid+'" data-eid="'+eid+'" data-l="'+l+'" data-esp="'+esp+'" onchange="reFilterEspCol(this)">'+
+            '<option value="">Todos los SKUs ('+skus.length+')</option>'+
+            skus.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('')+
+            '</select></div>':'';
+        })()+
+        '<div style="padding:0 10px 10px;display:flex;flex-direction:column;gap:8px;">'+
+          '<div class="gc" style="padding:8px"><div id="dd_'+eid+'_bpm" style="display:flex;flex-direction:column;height:100%;"><div class="gt" style="margin-bottom:4px">⚡ BPM — Diario</div><div class="cw h160"><canvas id="'+eid+'_bpm"></canvas></div></div></div>'+
+          '<div class="gc" style="padding:8px"><div id="dd_'+eid+'_caj" style="display:flex;flex-direction:column;height:100%;"><div class="gt" style="margin-bottom:4px">📦 Cajas Prod. vs Prog.</div><div class="cw h160"><canvas id="'+eid+'_caj"></canvas></div></div></div>'+
+          '<div class="gc" style="padding:8px"><div id="dd_'+eid+'_kh" style="display:flex;flex-direction:column;height:100%;"><div class="gt" style="margin-bottom:4px">👥 Kg/H/Persona — Diario</div><div class="cw h160"><canvas id="'+eid+'_kh"></canvas></div></div></div>'+
+          '<div class="gc" style="padding:8px"><div id="dd_'+eid+'_pers" style="display:flex;flex-direction:column;height:100%;"><div class="gt" style="margin-bottom:4px">👤 Personas — Diario</div><div class="cw h160"><canvas id="'+eid+'_pers"></canvas></div></div></div>'+
+        '</div>'+
+      '</div>';
+  });
+  container.innerHTML='<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:10px;overflow-x:auto;">'+colHtml+'</div>';
+  // Render all especie charts immediately
+  especies.forEach(function(esp){
+    var esub=sub.filter(function(r){return r.especie===esp;});
+    var eid='s3l'+l+'_esp_'+esp.replace(/[^a-z0-9]/gi,'_');
+    ddBar('dd_'+eid+'_bpm',eid+'_bpm',esub,'dia',{},function(id,ddd){
+      dx(id); if(!el(id))return;
+      mkLine(id,ddd.labels,[
+        {label:'B/Min Real',data:ddd.avgFn(function(r){return r.bpm_total;}),borderColor:C.cyn,backgroundColor:'rgba(6,182,212,.07)',fill:true,tension:0.3,pointRadius:ddd.level==='dia'?2:4,spanGaps:true},
+        {label:'B/Min Std', data:ddd.avgFn(function(r){return r.bpm_std;}), borderColor:C.amb,borderDash:[4,3],backgroundColor:'transparent',tension:0.3,pointRadius:ddd.level==='dia'?2:4,spanGaps:true}
+      ]);
+    });
+    ddBar('dd_'+eid+'_caj',eid+'_caj',esub,'dia',{},function(id,ddd){
+      dx(id); if(!el(id))return;
+      var cajD=ddd.sumFn(function(s){return Math.round(s.reduce(function(a,r){return a+r.cajas;},0));});
+      var progD=ddd.keys.map(function(k){
+        var ps;
+        if(ddd.level==='dia') ps=PROG.filter(function(r){return r.fecha===k;});
+        else if(ddd.level==='sem'){var sk=k;ps=PROG.filter(function(r){var d=new Date(r.fecha+'T00:00:00');var j=new Date(d.getFullYear(),0,1);return String(Math.ceil((((d-j)/86400000)+j.getDay()+1)/7))===sk;});}
+        else{var p=k.split('/');ps=PROG.filter(function(r){var d=new Date(r.fecha+'T00:00:00');return d.getFullYear()==+p[0]&&(d.getMonth()+1)==+p[1];});}
+        return Math.round(ps.reduce(function(a,r){return a+r.cajas_prog;},0));
+      });
+      var cumpD=cajD.map(function(c,i){return progD[i]>0?+(c/progD[i]*100).toFixed(1):null;});
+      var hasProg=progD.some(function(v){return v>0;});
+      var ds=[{type:'bar',label:'Cajas Prod.',data:cajD,backgroundColor:'rgba(6,182,212,.6)',borderRadius:2,yAxisID:'y',order:2}];
+      if(hasProg){
+        ds.push({type:'bar',label:'Cajas Prog.',data:progD,backgroundColor:'rgba(245,158,11,.35)',borderColor:'rgba(245,158,11,.7)',borderWidth:1,borderRadius:2,yAxisID:'y',order:3});
+        ds.push({type:'line',label:'Cumpl.%',data:cumpD,borderColor:C.grn,backgroundColor:'transparent',pointRadius:2,spanGaps:true,tension:0.2,yAxisID:'y2',borderWidth:2,order:1,pointBackgroundColor:cumpD.map(function(v){return v==null?'transparent':v>=100?C.grn:v>=85?C.amb:C.red;})});
+      }
+      dx(id);CH[id]=new Chart(el(id),{data:{labels:ddd.labels,datasets:ds},
+        options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:5}},
+            tooltip:{mode:'index',callbacks:{label:function(ctx){if(!ctx||ctx.raw==null)return null;return ctx.dataset.label==='Cumpl.%'?' '+ctx.raw+'%':' '+ctx.dataset.label+': '+fmt(ctx.raw);}}},},
+          scales:{x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:14,maxRotation:35}},
+                  y:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return fmtK(v);}}},
+                  y2:{position:'right',min:0,max:150,grid:{drawOnChartArea:false},ticks:{color:C.grn,font:{size:9},callback:function(v){return v+'%';}}}}
+        }
+      });
+    });
+    ddLine('dd_'+eid+'_kh',eid+'_kh',esub,function(r){return r.kg_h_pers;},'Kg/H/Persona','#84cc16',false);
+    ddLine('dd_'+eid+'_pers',eid+'_pers',esub,function(r){return r.personas;},'Personas','rgba(168,85,247,.8)',false);
+  });
+}
+
+
+function reFilterEspCol(sel){
+  var eid=sel.dataset.eid;
+  var l=sel.dataset.l;
+  var esp=sel.dataset.esp;
+  var sku=sel.value;
+  var cached=window._PC&&window._PC['s3g_'+l];
+  var fullSub=(cached||PROD.filter(function(r){return r.area==='ZENV'&&r.linea===l;})).filter(function(r){return r.especie===esp;});
+  var esub=sku?fullSub.filter(function(r){return r.sku===sku;}):fullSub;
+  // Re-render all 4 charts for this especie column
+  ddBar('dd_'+eid+'_bpm',eid+'_bpm',esub,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    mkLine(id,ddd.labels,[
+      {label:'B/Min Real',data:ddd.avgFn(function(r){return r.bpm_total;}),borderColor:C.cyn,backgroundColor:'rgba(6,182,212,.07)',fill:true,tension:0.3,pointRadius:ddd.level==='dia'?2:4,spanGaps:true},
+      {label:'B/Min Std', data:ddd.avgFn(function(r){return r.bpm_std;}), borderColor:C.amb,borderDash:[4,3],backgroundColor:'transparent',tension:0.3,pointRadius:ddd.level==='dia'?2:4,spanGaps:true}
+    ]);
+  });
+  ddBar('dd_'+eid+'_caj',eid+'_caj',esub,'dia',{},function(id,ddd){
+    dx(id); if(!el(id))return;
+    var cajD=ddd.sumFn(function(s){return Math.round(s.reduce(function(a,r){return a+r.cajas;},0));});
+    var progD=ddd.keys.map(function(k){
+      var ps;
+      if(ddd.level==='dia') ps=PROG.filter(function(r){return r.fecha===k;});
+      else if(ddd.level==='sem'){var sk2=k;ps=PROG.filter(function(r){var d=new Date(r.fecha+'T00:00:00');var j=new Date(d.getFullYear(),0,1);return String(Math.ceil((((d-j)/86400000)+j.getDay()+1)/7))===sk2;});}
+      else{var p=k.split('/');ps=PROG.filter(function(r){var d=new Date(r.fecha+'T00:00:00');return d.getFullYear()==+p[0]&&(d.getMonth()+1)==+p[1];});}
+      return Math.round(ps.reduce(function(a,r){return a+r.cajas_prog;},0));
+    });
+    var cumpD=cajD.map(function(c,i){return progD[i]>0?+(c/progD[i]*100).toFixed(1):null;});
+    var hasProg=progD.some(function(v){return v>0;});
+    var ds=[{type:'bar',label:'Cajas Prod.',data:cajD,backgroundColor:'rgba(6,182,212,.6)',borderRadius:2,yAxisID:'y',order:2}];
+    if(hasProg){ds.push({type:'bar',label:'Cajas Prog.',data:progD,backgroundColor:'rgba(245,158,11,.35)',borderColor:'rgba(245,158,11,.7)',borderWidth:1,borderRadius:2,yAxisID:'y',order:3});ds.push({type:'line',label:'Cumpl.%',data:cumpD,borderColor:C.grn,backgroundColor:'transparent',pointRadius:2,spanGaps:true,tension:0.2,yAxisID:'y2',borderWidth:2,order:1,pointBackgroundColor:cumpD.map(function(v){return v==null?'transparent':v>=100?C.grn:v>=85?C.amb:C.red;})});}
+    dx(id);CH[id]=new Chart(el(id),{data:{labels:ddd.labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:C.txt,font:{size:9},padding:5}},tooltip:{mode:'index',callbacks:{label:function(ctx){if(!ctx||ctx.raw==null)return null;return ctx.dataset.label==='Cumpl.%'?' '+ctx.raw+'%':' '+ctx.dataset.label+': '+fmt(ctx.raw);}}},},scales:{x:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},maxTicksLimit:14,maxRotation:35}},y:{grid:{color:C.grid},ticks:{color:C.txt,font:{size:9},callback:function(v){return fmtK(v);}}},y2:{position:'right',min:0,max:150,grid:{drawOnChartArea:false},ticks:{color:C.grn,font:{size:9},callback:function(v){return v+'%';}}}}}}); 
+  });
+  ddLine('dd_'+eid+'_kh',eid+'_kh',esub,function(r){return r.kg_h_pers;},'Kg/H/Persona','#84cc16',false);
+  ddLine('dd_'+eid+'_pers',eid+'_pers',esub,function(r){return r.personas;},'Personas','rgba(168,85,247,.8)',false);
+}
+
+
+/* ══ TIEMPOS PERDIDOS — v6 (clean rebuild) ════════════════════════ */
+
+// TP-specific filter functions (use PD / TD from v6 data)
+const fpTP=function(o){
+  return PD.filter(r=>
+    (!o.año||r.año==o.año)&&(!o.mes||r.mes==o.mes)&&(!o.sem||r.semana==o.sem)&&
+    (!o.dia||r.dia==o.dia)&&(!o.area||r.area===o.area)&&
+    (!o.tipo||r.tipo_paro===o.tipo)&&(!o.turno||String(r.turno)===o.turno));
+};
+const ftTP=function(o){
+  return TD.filter(r=>
+    (!o.año||r.año==o.año)&&(!o.mes||r.mes==o.mes)&&(!o.sem||r.semana==o.sem)&&
+    (!o.dia||r.dia==o.dia)&&
+    (!o.lines||o.lines.includes(r.linea)));
+};
+
+
+/* DATA */
+const PD_E=/*PD_DATA*/;
+const TD_E=/*TD_DATA*/;
+let IDX_TP=/*IDX_DATA*/;
+const LD=/*LD_DATA*/;
+let PD=[...PD_E], TD=[...TD_E];
+
+/* CONSTANTS */
+/* [const dup removed] */
+/* [const dup removed] */
+/* [const dup removed] */
+const LS={S_L01:'L1',S_L03:'L3',S_L04:'L4',S_L05:'L5',S_MANUAL:'Manu',S_LMANCU:'ManCu',S_ENV1:'ENV1'};
+const CAT_C={Mantención:'#ef4444',Producción:'#3b82f6',Calidad:'#f59e0b',Logistica:'#06b6d4',Prevención:'#a855f7',Aseo:'#22c55e',RRHH:'#f97316',Planificación:'#64748b'};
+const CC={red:'#ef4444',amb:'#f59e0b',grn:'#22c55e',blu:'#3b82f6',pur:'#a855f7',cyn:'#06b6d4',grid:'rgba(255,255,255,.07)',txt:'rgba(255,255,255,.85)'};
+const BDGC={Mantención:'bm',Producción:'bp',Calidad:'bc',Logistica:'bl',Prevención:'bv',Aseo:'ba'};
+/* [const dup removed] */
+/* [const dup removed] */
+/* [const dup removed] */
+/* [dup removed] */
+
+/* UTILS */
+/* [dup removed] */
+const fmtH=m=>(m/60).toFixed(1);
+/* [dup removed] */
+function _ft_v6(o={}){
+  return TD.filter(r=>
+    (!o.año||r.año==o.año)&&(!o.mes||r.mes==o.mes)&&(!o.sem||r.semana==o.sem)&&
+    (!o.dia||r.dia==o.dia)&&
+    (!o.lines||o.lines.includes(r.linea)));
+}
+
+/* POPULATE FILTERS */
+
+/* ── DRILL-DOWN ENGINE (Tiempos Perdidos) ───────────────────────────────── */
+var V6DD={};
+
+function v6ddGetLabels(pd,td,level,ctx){
+  if(level==='mes'){
+    const set=new Set();pd.forEach(r=>{if(r.año&&r.mes)set.add(r.año+'/'+String(r.mes).padStart(2,'0'));});
+    td.forEach(r=>{if(r.año&&r.mes)set.add(r.año+'/'+String(r.mes).padStart(2,'0'));});
+    const keys=[...set].sort();
+    return{keys,labels:keys.map(k=>{const[y,m]=k.split('/');return MESES[+m]||m;}),level:'mes'};
+  }
+  if(level==='sem'){
+    var base=ctx&&ctx.mes?pd.filter(r=>r.mes==ctx.mes):pd;
+    const set=new Set();base.forEach(r=>{if(r.semana)set.add(r.semana);});
+    const sems=[...set].sort((a,b)=>a-b);
+    return{keys:sems.map(s=>String(s)),labels:sems.map(s=>'S'+s),level:'sem'};
+  }
+  if(level==='dia'){
+    var base2=pd;
+    if(ctx&&ctx.mes) base2=base2.filter(r=>r.mes==ctx.mes);
+    if(ctx&&ctx.sem) base2=base2.filter(r=>r.semana==ctx.sem);
+    const set=new Set();base2.forEach(r=>{if(r.fecha)set.add(r.fecha);});
+    const dates=[...set].sort();
+    return{keys:dates,labels:dates.map(d=>{const p=d.split('-');return +p[2]+'/'+ +p[1];}),level:'dia'};
+  }
+}
+
+function v6FilterByKey(pd,key,level){
+  if(level==='mes'){const[y,m]=key.split('/');return pd.filter(r=>r.año==+y&&r.mes==+m);}
+  if(level==='sem') return pd.filter(r=>String(r.semana)===key);
+  if(level==='dia') return pd.filter(r=>r.fecha===key);
+  return pd;
+}
+
+function v6ddBar(wrapId, buildFn, level, ctx){
+  var wrap=document.getElementById(wrapId); if(!wrap)return;
+  var btns=wrap.querySelector('.dd-bar');
+  if(!btns){btns=document.createElement('div');btns.className='dd-bar';wrap.insertBefore(btns,wrap.firstChild);}
+  var MMAP={1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',7:'Jul',8:'Ago',9:'Sep',10:'Oct',11:'Nov',12:'Dic'};
+  btns.innerHTML='<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);margin-right:4px;">Nivel:</span>';
+  ['mes','sem','dia'].forEach(function(lv){
+    var b=document.createElement('button');
+    b.className='dd-btn'+(level===lv?' on':'');
+    b.textContent={mes:'📅 Mes',sem:'📆 Semana',dia:'🗓 Día'}[lv];
+    b.addEventListener('click',function(){
+      V6DD[wrapId].level=lv;
+      v6ddBar(wrapId,V6DD[wrapId].buildFn,lv,V6DD[wrapId].ctx||{});
+    });
+    btns.appendChild(b);
+  });
+  if(ctx&&ctx.mes){
+    var sp=document.createElement('span');
+    sp.style.cssText='font-size:9px;font-weight:700;text-transform:uppercase;color:var(--amb);margin-left:6px;';
+    sp.textContent='▸ '+(MMAP[ctx.mes]||ctx.mes)+(ctx.sem?' S'+ctx.sem:'');
+    btns.appendChild(sp);
+  }
+  V6DD[wrapId]={buildFn,level,ctx:ctx||{}};
+  buildFn(level, ctx||{});
+}
+
+function popAreaTP(pfx,area){
+  const pd=PD.filter(r=>r.area===area);
+  const años=[...new Set(pd.map(r=>r.año))].sort();
+  const meses=[...new Set(pd.map(r=>r.mes))].sort((a,b)=>a-b);
+  function fill(el,opts,blank){
+    if(!el)return;const cur=el.value;
+    el.innerHTML=`<option value="">${blank}</option>`;
+    opts.forEach(o=>el.innerHTML+=`<option value="${o.v}">${o.l}</option>`);
+    if([...el.options].some(o=>o.value==cur))el.value=cur;
+  }
+  fill(document.getElementById(pfx+'A'),años.map(a=>({v:a,l:a})),'Todos');
+  fill(document.getElementById(pfx+'M'),meses.map(m=>({v:m,l:MESES_F[m]||m})),'Todos');
+}
+
+/* CASCADE: Mes -> Semana; Semana -> Dia */
+function cascMesSem2(pfx,idxKey){
+  const mes=sv(pfx+'M');
+  const semEl=document.getElementById(pfx+'S');
+  if(!semEl)return;
+  const idx=IDX_TP[idxKey]||IDX_TP['MS']||{};
+  const sems=mes&&idx[mes]?idx[mes]:[];
+  const cur=semEl.value;
+  semEl.innerHTML='<option value="">Todas</option>'+sems.map(s=>`<option value="${s}">Sem ${s}</option>`).join('');
+  if(sems.includes(+cur))semEl.value=cur;
+  cascSemDia2(pfx,idxKey.replace('MS','SD'));
+}
+function cascSemDia2(pfx,idxKey){
+  const sem=sv(pfx+'S');
+  const diaEl=document.getElementById(pfx+'D');
+  if(!diaEl)return;
+  const idx=IDX_TP[idxKey]||IDX_TP['SD']||{};
+  const dias=sem&&idx[sem]?idx[sem]:[];
+  const cur=diaEl.value;
+  diaEl.innerHTML='<option value="">Todos</option>'+dias.map(d=>`<option value="${d}">Día ${d}</option>`).join('');
+  if(dias.includes(+cur))diaEl.value=cur;
+}
+
+/* CHART FACTORIES */
+function mkBarStk(id,labels,ds){
+  dx(id);
+  CH[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',labels:{color:'rgba(255,255,255,.85)',font:{size:9},padding:6}},
+        tooltip:{mode:'index',
+          callbacks:{
+            label:ctx=>`${ctx.dataset.label}: ${fmt(ctx.raw)} min`,
+            afterBody:items=>{const t=items.reduce((a,i)=>a+i.raw,0);return[`Total: ${fmt(t)} min`];}
+          }}},
+      scales:{
+        x:{stacked:true,grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:9},maxTicksLimit:15,maxRotation:30}},
+        y:{stacked:true,grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:9},callback:v=>fmt(v)}}}}});
+}
+
+function mkPareto(id,data,lim=8){
+  const map={};
+  data.forEach(r=>{map[r.falla]=(map[r.falla]||0)+r.minutos;});
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,lim);
+  const labels=sorted.map(e=>e[0].length>14?e[0].slice(0,12)+'…':e[0]);
+  const vals=sorted.map(e=>Math.round(e[1]));
+  const total=vals.reduce((a,b)=>a+b,0);
+  let acc=0;
+  const cum=vals.map(v=>{acc+=v;return+(acc/total*100).toFixed(1);});
+  const cut=cum.findIndex(v=>v>=80);
+  dx(id);
+  CH[id]=new Chart(document.getElementById(id),{
+    data:{labels,datasets:[
+      {type:'bar',label:'Minutos perdidos',data:vals,
+       backgroundColor:vals.map((_,i)=>i<=cut?CC.red:'rgba(239,68,68,.4)'),
+       yAxisID:'y',borderRadius:3},
+      {type:'line',label:'% Acumulado',data:cum,
+       borderColor:CC.blu,backgroundColor:'transparent',
+       pointBackgroundColor:cum.map(v=>v>=80?CC.red:CC.blu),
+       pointRadius:4,yAxisID:'y2',tension:0.3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'top',labels:{color:'rgba(255,255,255,.85)',font:{size:9},padding:6}},
+        tooltip:{
+          mode:'index',
+          callbacks:{
+            label:ctx=>{
+              if(ctx.datasetIndex===0)return `Minutos: ${fmt(ctx.raw)}`;
+              return `Acumulado: ${ctx.raw}%`;
+            },
+            afterBody:items=>{
+              const barItem=items.find(i=>i.datasetIndex===0);
+              if(!barItem)return[];
+              return[`% del total: ${total>0?(barItem.raw/total*100).toFixed(1):0}%`];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:8},maxRotation:35}},
+        y:{grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:8},callback:v=>fmt(v)}},
+        y2:{position:'right',min:0,max:100,grid:{drawOnChartArea:false},
+            ticks:{color:CC.blu,font:{size:8},callback:v=>v+'%'}}}}});
+  return{sorted,total};
+}
+
+/* [dup removed] */
+
+function mkWF(id,labels,vals,colors){
+  if(!document.getElementById(id))return;
+  let run=vals[0];const bases=[0];
+  for(let i=1;i<vals.length-1;i++){bases.push(run);run-=vals[i];}bases.push(0);
+  const fd=bases.map((b,i)=>{if(i===0||i===vals.length-1)return vals[i];return[b-vals[i],b];});
+  dx(id);
+  CH[id]=new Chart(document.getElementById(id),{type:'bar',
+    data:{labels,datasets:[{data:fd,backgroundColor:colors,borderRadius:3,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{
+          label:ctx=>{const r=ctx.raw;
+            if(Array.isArray(r))return`Pérdida: ${fmt(r[1]-r[0])} min`;
+            return`${fmt(r)} min`;}}}},
+      scales:{
+        x:{grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:8},maxRotation:30}},
+        y:{grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:8},callback:v=>fmt(v)}}}}});
+}
+
+function mkDispLine(id,lines,pd,td){
+  if(!document.getElementById(id))return;
+  // Daily disp: compute per day from filtered td
+  const daySet=new Set();
+  td.forEach(r=>{if(r.fecha)daySet.add(r.fecha);});
+  const allDays=[...daySet].sort();
+  if(!allDays.length){dx(id);return;}
+  const dayLbls=allDays.map(d=>{const p=d.split('-');return +p[2]+'/'+ +p[1];});
+  const activeLines=lines.filter(l=>pd.some(r=>r.linea===l));
+  const ds=activeLines.map((l,i)=>{
+    const col=LINE_COLS[i%LINE_COLS.length];
+    const pts=allDays.map(fecha=>{
+      const sub=td.filter(r=>r.linea===l&&r.fecha===fecha);
+      const teo=sub.reduce((a,r)=>a+r.minutos,0);
+      const efec=sub.reduce((a,r)=>a+(r.efec_min||0),0);
+      return teo>0?+(efec/teo*100).toFixed(1):null;
+    });
+    if(!pts.some(v=>v!=null))return null;
+    return{label:LMAP[l]||l,data:pts,borderColor:col,backgroundColor:'transparent',
+      fill:false,tension:0.2,pointRadius:2,borderWidth:1.5,spanGaps:true,
+      pointBackgroundColor:pts.map(v=>v===null?'transparent':v>=85?col:v>=70?CC.amb:CC.red),
+      pointBorderColor:pts.map(v=>v===null?'transparent':v>=85?col:v>=70?CC.amb:CC.red)};
+  }).filter(Boolean);
+  if(!ds.length){dx(id);return;}
+  dx(id);
+  CH[id]=new Chart(document.getElementById(id),{type:'line',data:{labels:dayLbls,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',labels:{color:'rgba(255,255,255,.85)',font:{size:9},padding:6}},
+        tooltip:{mode:'index',callbacks:{label:ctx=>ctx.raw===null?null:`${ctx.dataset.label}: ${ctx.raw}%`}}},
+      scales:{
+        x:{grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:9},maxTicksLimit:20,maxRotation:35}},
+        y:{grid:{color:CC.grid},min:0,max:100,ticks:{color:CC.txt,font:{size:9},callback:v=>v+'%'}}}},
+    plugins:[{id:'refLine',afterDraw:ch=>{
+      const{ctx,chartArea:{left,right},scales:{y}}=ch;
+      const yPx=y.getPixelForValue(85);
+      ctx.save();ctx.setLineDash([4,4]);
+      ctx.strokeStyle='rgba(239,68,68,.45)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(left,yPx);ctx.lineTo(right,yPx);ctx.stroke();
+      ctx.setLineDash([]);ctx.fillStyle='rgba(239,68,68,.7)';ctx.font='bold 9px Inter';
+      ctx.fillText('85%',left+4,yPx-4);ctx.restore();}}]});
+}
+
+function mkTurnoBar(id,pd){
+  if(!document.getElementById(id))return;
+  const turnos=[1,2,3].filter(t=>pd.some(r=>r.turno===t));
+  const plan=turnos.map(t=>Math.round(pd.filter(r=>r.turno===t&&r.tipo_paro==='Paro Planificado').reduce((a,r)=>a+r.minutos,0)));
+  const nopl=turnos.map(t=>Math.round(pd.filter(r=>r.turno===t&&r.tipo_paro==='Paro No Planificado').reduce((a,r)=>a+r.minutos,0)));
+  dx(id);
+  CH[id]=new Chart(document.getElementById(id),{type:'bar',
+    data:{labels:turnos.map(t=>`Turno ${t}`),datasets:[
+      {label:'Planificado',data:plan,backgroundColor:'rgba(34,197,94,.75)',borderRadius:3,stack:'s'},
+      {label:'No Planificado',data:nopl,backgroundColor:'rgba(239,68,68,.85)',borderRadius:3,stack:'s'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',labels:{color:'rgba(255,255,255,.85)',font:{size:9},padding:6}},
+        tooltip:{mode:'index',
+          callbacks:{
+            label:ctx=>`${ctx.dataset.label}: ${fmt(ctx.raw)} min`,
+            afterBody:items=>{const t=items.reduce((a,i)=>a+i.raw,0);return[`Total: ${fmt(t)} min`];}
+          }}},
+      scales:{
+        x:{stacked:true,grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:9}}},
+        y:{stacked:true,grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:9},callback:v=>fmt(v)}}}}});
+}
+
+function mkTend(id,pd){
+  if(!document.getElementById(id))return;
+  const mp={},mn={};
+  pd.forEach(r=>{if(!r.fecha)return;
+    if(r.tipo_paro==='Paro Planificado')mp[r.fecha]=(mp[r.fecha]||0)+r.minutos;
+    else mn[r.fecha]=(mn[r.fecha]||0)+r.minutos;});
+  const days=[...new Set([...Object.keys(mp),...Object.keys(mn)])].sort();
+  const lbls=days.map(d=>{const pp=d.split('-');return +pp[2]+'/'+ +pp[1];});
+  mkBarStk(id,lbls,[
+    {label:'Plan.',data:days.map(d=>Math.round(mp[d]||0)),backgroundColor:'rgba(34,197,94,.7)',borderRadius:2,stack:'s'},
+    {label:'No Plan.',data:days.map(d=>Math.round(mn[d]||0)),backgroundColor:'rgba(239,68,68,.8)',borderRadius:2,stack:'s'}]);
+}
+
+/* SHARED BUILDERS */
+function buildKpis(cid,pd,td){
+  const teo=td.reduce((a,r)=>a+r.minutos,0);
+  const perd=pd.reduce((a,r)=>a+r.minutos,0);
+  const plan=pd.filter(r=>r.tipo_paro==='Paro Planificado').reduce((a,r)=>a+r.minutos,0);
+  const nopl=perd-plan;
+  const real=Math.max(0,teo-perd);
+  const disp=teo>0?(real/teo*100).toFixed(1):100;
+  const dp=parseFloat(disp);
+  const dc=dp>=85?'kg':dp>=70?'ka':'kr';
+  const fallas=pd.filter(r=>r.categoria==='Mantención');
+  const mttr=fallas.length>0?(fallas.reduce((a,r)=>a+r.minutos,0)/fallas.length).toFixed(0):0;
+  const mtbf=fallas.length>0?(real/fallas.length).toFixed(0):0;
+  const pnp=perd>0?(nopl/perd*100).toFixed(1):0;
+  document.getElementById(cid).innerHTML=`
+    <div class="kpi kb"><div class="klbl">T. Teórico</div><div class="kval">${fmt(teo)}</div><div class="ksub">${fmtH(teo)} horas planificadas</div></div>
+    <div class="kpi kr"><div class="klbl">T. Perdido Total</div><div class="kval">${fmt(perd)}</div><div class="ksub">${pd.length} eventos · ${fmtH(perd)}h</div></div>
+    <div class="kpi kg"><div class="klbl">T. Plan. (Prog.)</div><div class="kval">${fmt(plan)}</div><div class="ksub">${fmtH(plan)}h · colación, inicio…</div></div>
+    <div class="kpi ka"><div class="klbl">T. No Plan. (Fallas)</div><div class="kval">${fmt(nopl)}</div><div class="ksub">${fmtH(nopl)}h · fallas sorpresa</div></div>
+    <div class="kpi kg"><div class="klbl">T. Disponible Real</div><div class="kval">${fmt(real)}</div><div class="ksub">${fmtH(real)} horas efectivas</div></div>
+    <div class="kpi ${dc}"><div class="klbl">Disponibilidad OEE</div><div class="kval">${disp}%</div><div class="ksub">Meta ≥ 85%</div>
+      <div class="kbar"><div class="kbf" style="width:${Math.min(100,dp)}%;background:${dp>=85?CC.grn:dp>=70?CC.amb:CC.red}"></div></div></div>
+    <div class="kpi kc"><div class="klbl">MTTR</div><div class="kval">${mttr} min</div><div class="ksub">Media reparación mantención</div></div>
+    <div class="kpi kb"><div class="klbl">MTBF</div><div class="kval">${mtbf} min</div><div class="ksub">Entre fallas</div></div>
+    <div class="kpi ka"><div class="klbl">% No Planif.</div><div class="kval">${pnp}%</div><div class="ksub">del total perdido</div></div>`;
+}
+
+function buildLC(cid,pd,td,lines){
+  const tByL={};td.forEach(r=>{tByL[r.linea]=(tByL[r.linea]||0)+r.minutos;});
+  let h='';
+  lines.forEach(l=>{
+    const teo=tByL[l]||0;
+    const all=pd.filter(r=>r.linea===l);
+    const perd=all.reduce((a,r)=>a+r.minutos,0);
+    const plan=all.filter(r=>r.tipo_paro==='Paro Planificado').reduce((a,r)=>a+r.minutos,0);
+    const nopl=perd-plan;
+    const real=Math.max(0,teo-perd);
+    const pct=teo>0?(real/teo*100).toFixed(1):perd===0?'100.0':'—';
+    const col=parseFloat(pct)>=90?CC.grn:parseFloat(pct)>=75?CC.amb:CC.red;
+    h+=`<div class="lc">
+      <div class="lcn">${LMAP[l]||l}</div>
+      <div class="lcp" style="color:${col}">${pct}%</div>
+      <div class="lcs">Perdido: ${fmt(perd)} min</div>
+      <div class="lcsp" style="color:rgba(34,197,94,.7)">Plan: ${fmt(plan)} min</div>
+      <div class="lcsp" style="color:rgba(239,68,68,.8)">No Plan: ${fmt(nopl)} min</div>
+    </div>`;
+  });
+  const elLC=document.getElementById(cid);
+  if(elLC)elLC.innerHTML=h?'<div class="lcgrid">'+h+'</div>':'<span style="color:var(--mut);font-size:11px">Sin datos</span>';
+}
+
+function buildTC(cid,pd,lines){
+  const np=pd.filter(r=>r.tipo_paro==='Paro No Planificado');
+  let h='';
+  lines.forEach(l=>{
+    const sub=np.filter(r=>r.linea===l);if(!sub.length)return;
+    const cm={};sub.forEach(r=>{cm[r.categoria]=(cm[r.categoria]||0)+r.minutos;});
+    const top=Object.entries(cm).sort((a,b)=>b[1]-a[1])[0];if(!top)return;
+    const col=CAT_C[top[0]]||CC.blu;
+    const tot=sub.reduce((a,r)=>a+r.minutos,0);
+    const pct=tot>0?(top[1]/tot*100).toFixed(1):0;
+    h+=`<div class="tc" style="border-left-color:${col}">
+      <div class="tcln">${LMAP[l]||l}</div>
+      <div class="tccat" style="color:${col}">${top[0]}</div>
+      <div class="tcmin" style="color:${col}">${fmt(top[1])} min</div>
+      <div class="tcsub">${pct}% no planif. · ${sub.length} ev.</div></div>`;
+  });
+  const elTC=document.getElementById(cid);
+  if(elTC)elTC.innerHTML=h?'<div class="tcgrid">'+h+'</div>':'<span style="color:var(--mut);font-size:11px">Sin paros no planificados</span>';
+}
+
+function buildCasc(id1,id2,pd,tdSub){
+  // Use T.Minutos (teórico) for cascade top bar; efec comes from filtered data
+  const teo=Math.round(tdSub.reduce((a,r)=>a+r.minutos,0));
+  const efec=Math.round(tdSub.reduce((a,r)=>a+(r.efec_min||0),0));
+  const cats=['Producción','Mantención','Logistica','Calidad','Prevención','Aseo','RRHH'];
+  const act=cats.filter(c=>pd.some(r=>r.categoria===c));
+  const losses=act.map(c=>Math.round(pd.filter(r=>r.categoria===c).reduce((a,r)=>a+r.minutos,0)));
+  const totalLoss=losses.reduce((a,b)=>a+b,0);
+  // neto: use efec_min (real productive time) when available, else teo-losses
+  const neto=efec>0?efec:Math.max(0,teo-totalLoss);
+  mkWF(id1,['T.Teórico',...act,'T.Real'],[teo,...losses,neto],[CC.blu,...act.map(c=>CAT_C[c]||CC.amb),CC.grn]);
+  const map={};pd.forEach(r=>{map[r.falla]=(map[r.falla]||0)+r.minutos;});
+  const top=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const topT=top.reduce((a,e)=>a+e[1],0);
+  const other=Math.max(0,Math.round(pd.reduce((a,r)=>a+r.minutos,0)-topT));
+  const ent=[...top,['Otros',other]];
+  const n2=efec>0?efec:Math.max(0,teo-Math.round(pd.reduce((a,r)=>a+r.minutos,0)));
+  const cc2=['#ef4444','#dc2626','#f59e0b','#d97706','#3b82f6','#1d4ed8','#a855f7','#64748b'];
+  mkWF(id2,['T.Teórico',...ent.map(e=>e[0].length>11?e[0].slice(0,9)+'…':e[0]),'T.Real'],
+    [teo,...ent.map(e=>Math.round(e[1])),n2],[CC.blu,...ent.map((_,i)=>cc2[i]||CC.amb),CC.grn]);
+}
+
+function buildLineGroups(cid,pd,td,lines,pfx){
+  const el=document.getElementById(cid);if(!el)return;
+  const tByL={};td.forEach(r=>{tByL[r.linea]=(tByL[r.linea]||0)+r.minutos;});
+  const eByL={};td.forEach(r=>{eByL[r.linea]=(eByL[r.linea]||0)+(r.efec_min||0);});
+  let h='';
+  lines.forEach((l,i)=>{
+    const sub=pd.filter(r=>r.linea===l);if(!sub.length)return;
+    const teo=tByL[l]||0;
+    const efec=eByL[l]||0;
+    const perd=sub.reduce((a,r)=>a+r.minutos,0);
+    const plan=sub.filter(r=>r.tipo_paro==='Paro Planificado').reduce((a,r)=>a+r.minutos,0);
+    const nopl=perd-plan;
+    const real=efec>0?efec:Math.max(0,teo-perd);
+    const disp=teo>0?(real/teo*100).toFixed(1):'—';
+    const col=LINE_COLS[i%LINE_COLS.length];
+    const grpId=pfx+'_grp_'+l.replace(/[^a-z0-9]/gi,'_');
+    const ids={p:`${pfx}${l}p`,c1:`${pfx}${l}c1`,c2:`${pfx}${l}c2`,t:`${pfx}${l}t`,d:`${pfx}${l}d`,tu:`${pfx}${l}tu`};
+    if(!window._tdCache) window._tdCache={};
+    window._tdCache[grpId]=td;
+    h+=`<div class="linegrp" id="${grpId}" data-line="${l}" data-pfx="${pfx}">
+      <div class="lghead" onclick="toggleLGTP(this)">
+        <div class="lgh-dot" style="background:${col}"></div>
+        <span class="lgh-title">${LMAP[l]||l}</span>
+        <span class="lgh-stats">${sub.length} ev. · Plan: ${fmt(plan)} | No Plan: ${fmt(nopl)} min · Disp: ${disp}%</span>
+        <span class="lgh-arrow">▼</span>
+      </div>
+      <div class="lgbody">
+        <div class="lkpis">
+          <div class="lk"><div class="lklbl">T. Teórico</div><div class="lkval" style="color:var(--acc2)">${fmt(teo)}</div><div class="lksub">min</div></div>
+          <div class="lk"><div class="lklbl">T. Plan. (Prog.)</div><div class="lkval" style="color:var(--grn)">${fmt(plan)}</div><div class="lksub">min programados</div></div>
+          <div class="lk"><div class="lklbl">T. No Plan. (Fallas)</div><div class="lkval" style="color:var(--red)">${fmt(nopl)}</div><div class="lksub">min fallas sorpresa</div></div>
+          <div class="lk"><div class="lklbl">T. Real Disponible</div><div class="lkval" style="color:var(--grn)">${fmt(real)}</div><div class="lksub">${efec>0?'Tiempo Efec.':'Teórico−Perdido'}</div></div>
+          <div class="lk"><div class="lklbl">Disponibilidad</div>
+            <div class="lkval" style="color:${parseFloat(disp)>=90?'var(--grn)':parseFloat(disp)>=75?'var(--amb)':'var(--red)'}">${disp}%</div>
+            <div class="lksub">Meta ≥ 85%</div></div>
+          <div class="lk"><div class="lklbl">Eventos</div><div class="lkval" style="color:var(--amb)">${sub.length}</div><div class="lksub">registros</div></div>
+        </div>
+        <div class="g2">
+          <div class="gc">
+            <div class="gt">📊 Pareto de Causas</div>
+            <div class="gs">Hover para ver minutos y % del total</div>
+            <div class="cw h200"><canvas id="${ids.p}"></canvas></div>
+            <div class="ibox" id="${ids.p}ins" style="margin-top:6px;"></div>
+          </div>
+          <div class="gc">
+            <div class="gt">🥧 Distribución por Categoría</div>
+            <div class="gs">% visible en sectores · leyenda en blanco</div>
+            <div class="cw h200"><canvas id="${ids.d}"></canvas></div>
+          </div>
+        </div>
+        <div class="g2" style="margin-top:10px;">
+          <div class="gc">
+            <div class="gt">📈 Tendencia Diaria (min)</div>
+            <div class="gs">Verde = planificado · Rojo = no planificado</div>
+            <div class="cw h200"><canvas id="${ids.t}"></canvas></div>
+          </div>
+          <div class="gc">
+            <div class="gt">🔄 Comparación por Turno</div>
+            <div class="gs">Plan. vs No Plan. por turno de producción</div>
+            <div class="cw h200"><canvas id="${ids.tu}"></canvas></div>
+          </div>
+        </div>
+        <div class="g2" style="margin-top:10px;">
+          <div class="gc">
+            <div class="gt">🌊 Cascada por Categoría (min)</div>
+            <div class="gs">Del teórico al tiempo real disponible</div>
+            <div class="cw h200"><canvas id="${ids.c1}"></canvas></div>
+          </div>
+          <div class="gc">
+            <div class="gt">🌊 Cascada por Causa (min)</div>
+            <div class="gs">Top causas que reducen el tiempo disponible</div>
+            <div class="cw h200"><canvas id="${ids.c2}"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=h;
+}
+
+function renderLineCharts(l,sub,teo,ids,pfx,tdFiltered){
+  // tdFiltered = already-filtered TD (respects año/mes/sem filters), fallback to global per-line
+  const tdSub=tdFiltered
+    ? tdFiltered.filter(r=>r.linea===l)
+    : TD.filter(r=>r.linea===l);
+  const{sorted,total}=mkPareto(ids.p,sub,7);
+  // Pareto insight
+  const insEl=document.getElementById(ids.p+'ins');
+  if(insEl&&sorted.length){
+    const top3=sorted.slice(0,3);
+    const t3m=top3.reduce((a,e)=>a+e[1],0);
+    insEl.innerHTML=`<b>Top causas:</b> ${top3.map(e=>`<b>"${e[0]}"</b> (${fmt(e[1])} min)`).join(', ')}. Representan el <b>${total>0?(t3m/total*100).toFixed(1):0}%</b>.`;
+  }
+  // Donut per line (enhanced with top cause per category in tooltip)
+  const cm={};sub.forEach(r=>{cm[r.categoria]=(cm[r.categoria]||0)+r.minutos;});
+  const cats=Object.keys(cm).sort((a,b)=>cm[b]-cm[a]);
+  mkDonutEnhanced(ids.d,cats,cats.map(c=>Math.round(cm[c])),sub);
+  // Trend
+  mkTend(ids.t,sub);
+  // Turno comparison
+  mkTurnoBar(ids.tu,sub);
+  // Cascadas - use filtered TD for this line (respects año/mes/sem filters)
+  const tdCasc=tdSub.length?tdSub:(teo>0?[{linea:l,minutos:teo,efec_min:0}]:[]);
+  buildCasc(ids.c1,ids.c2,sub,tdCasc);
+}
+
+function toggleLGTP(hd){
+  const isOpen=hd.classList.contains('open');
+  hd.classList.toggle('open');
+  const body=hd.nextElementSibling;
+  body.classList.toggle('open');
+  if(!isOpen){
+    // Render charts lazily - use cached filtered td
+    const grp=hd.closest('.linegrp');
+    const l=grp.dataset.line;
+    const pfx=grp.dataset.pfx;
+    if(!l)return;
+    const area=pfx==='tp2'?'ZCIQ':'ZENV';
+    // Get filtered td from cache (set during buildLineGroups) or re-filter
+    const cachedTd=(window._tdCache&&window._tdCache[grp.id])||null;
+    const sub=fpTP({area,linea:l,...getAreaOpts(pfx,area)});
+    const tdForLine=cachedTd?cachedTd.filter(r=>r.linea===l):ftTP({...getAreaOpts(pfx,area),dia:o&&o.dia,lines:[l]});
+    const teo=tdForLine.reduce((a,r)=>a+r.minutos,0);
+    const ids={p:`${pfx}${l}p`,c1:`${pfx}${l}c1`,c2:`${pfx}${l}c2`,t:`${pfx}${l}t`,d:`${pfx}${l}d`,tu:`${pfx}${l}tu`};
+    renderLineCharts(l,sub,teo,ids,pfx,cachedTd);
+  }
+}
+
+function buildTbls(cid,pd,lines){
+  let h='';
+  lines.forEach(l=>{
+    const sub=pd.filter(r=>r.linea===l).sort((a,b)=>b.minutos-a.minutos).slice(0,5);
+    if(!sub.length)return;
+    const tot=pd.filter(r=>r.linea===l).length;
+    h+=`<div class="tcard"><div class="thd">
+      <span class="tht">${LMAP[l]||l}</span><span class="thc">Top 5 de ${tot}</span></div>
+      <table><thead><tr><th>Fecha</th><th>Causa</th><th>Cat.</th><th>Tipo</th><th>Min</th></tr></thead>
+      <tbody>${sub.map(r=>`<tr>
+        <td style="white-space:nowrap">${r.fecha}</td>
+        <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.falla}">${r.falla}</td>
+        <td><span class="bdg ${BDGC[r.categoria]||'bp'}">${r.categoria}</span></td>
+        <td style="font-size:9px;color:${r.tipo_paro.includes('No')?CC.amb:CC.txt}">${r.tipo_paro.includes('No')?'No Plan.':'Plan.'}</td>
+        <td style="font-family:var(--mono);font-weight:700;color:${r.minutos>=120?CC.red:r.minutos>=60?CC.amb:CC.txt}">${Math.round(r.minutos)}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  });
+  const elLC=document.getElementById(cid);
+  if(elLC)elLC.innerHTML=h?'<div class="lcgrid">'+h+'</div>':'<span style="color:var(--mut);font-size:11px">Sin datos</span>';
+}
+
+
+/* ── TOP 3 CAUSAS POR MES ─────────────────────────────────────────────────── */
+function mkTop3ByMonth(id, pd, tipoParo){
+  if(!document.getElementById(id))return;
+
+  // Get all month labels from filtered data
+  const mesSet = new Set();
+  pd.forEach(r => { if(r.fecha) mesSet.add(r.año+'/'+String(r.mes).padStart(2,'0')); });
+  const labels = [...mesSet].sort().map(k => {
+    const [y,m] = k.split('/');
+    return MESES[+m]||m;
+  });
+  const mesKeys = [...mesSet].sort();
+
+  // Filter by tipo
+  const subPD = tipoParo ? pd.filter(r => r.tipo_paro === tipoParo) : pd;
+
+  // Find global top 3 causas across all months (for consistent legend)
+  const globalMap = {};
+  subPD.forEach(r => { globalMap[r.falla] = (globalMap[r.falla]||0) + r.minutos; });
+  const top3global = Object.entries(globalMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>e[0]);
+
+  // Colors for top 3
+  const COLORS3 = tipoParo && tipoParo.includes('No')
+    ? ['#ef4444','#f97316','#f59e0b']   // reds/oranges for no planificado
+    : ['#3b82f6','#06b6d4','#a855f7'];   // blues/purples for planificado
+
+  // Build dataset per causa
+  const datasets = top3global.map((causa, i) => {
+    const data = mesKeys.map(k => {
+      const [y,m] = k.split('/');
+      return Math.round(subPD
+        .filter(r => r.falla===causa && r.año==+y && r.mes==+m)
+        .reduce((a,r) => a+r.minutos, 0));
+    });
+    return {
+      label: causa.length > 22 ? causa.slice(0,20)+'…' : causa,
+      fullLabel: causa,
+      data,
+      backgroundColor: COLORS3[i],
+      borderRadius: 3,
+      stack: 's'
+    };
+  });
+
+  // "Otras" dataset (rest)
+  const othersData = mesKeys.map(k => {
+    const [y,m] = k.split('/');
+    const total = Math.round(subPD.filter(r=>r.año==+y&&r.mes==+m).reduce((a,r)=>a+r.minutos,0));
+    const top3sum = top3global.reduce((a,causa) =>
+      a + Math.round(subPD.filter(r=>r.falla===causa&&r.año==+y&&r.mes==+m).reduce((s,r)=>s+r.minutos,0)), 0);
+    return Math.max(0, total - top3sum);
+  });
+  if(othersData.some(v=>v>0)){
+    datasets.push({
+      label:'Otras causas',fullLabel:'Otras causas',
+      data:othersData,
+      backgroundColor:'rgba(100,116,139,0.6)',
+      borderRadius:3,stack:'s'
+    });
+  }
+
+  dx(id);
+  CH[id] = new Chart(document.getElementById(id), {
+    type:'bar',
+    data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{
+          position:'bottom',
+          labels:{color:'rgba(255,255,255,.85)',font:{size:9},padding:8,
+            generateLabels: chart => chart.data.datasets.map((ds,i) => ({
+              text: ds.label,
+              fillStyle: ds.backgroundColor,
+              fontColor: 'rgba(255,255,255,.85)',
+              strokeStyle: 'transparent',
+              hidden: false, index: i
+            }))
+          }
+        },
+        tooltip:{
+          mode:'index',
+          callbacks:{
+            title: items => items[0]?.label || '',
+            label: ctx => {
+              if(!ctx.raw) return null;
+              const pct = (() => {
+                const total = ctx.chart.data.datasets.reduce((a,ds)=>a+(ds.data[ctx.dataIndex]||0),0);
+                return total > 0 ? (ctx.raw/total*100).toFixed(1)+'%' : '';
+              })();
+              return ` ${ctx.dataset.fullLabel||ctx.dataset.label}: ${fmt(ctx.raw)} min (${pct})`;
+            },
+            afterBody: items => {
+              const total = items.reduce((a,i)=>a+i.raw,0);
+              return total > 0 ? [`─────────────────`, `Total: ${fmt(total)} min`] : [];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{stacked:true, grid:{color:CC.grid}, ticks:{color:CC.txt,font:{size:9}}},
+        y:{stacked:true, grid:{color:CC.grid}, ticks:{color:CC.txt,font:{size:9},callback:v=>fmt(v)}}
+      }
+    }
+  });
+}
+
+/* ── ENHANCED DONUT with plan/noplan top cause per category ───────────────── */
+function mkDonutEnhanced(id, cats, vals, pd){
+  if(!document.getElementById(id))return;
+  const total = vals.reduce((a,b)=>a+b,0);
+
+  // Precompute per-category top causes
+  const catTopCauses = {};
+  cats.forEach(cat => {
+    const subCat = pd.filter(r=>r.categoria===cat);
+    const mapP = {}, mapNP = {};
+    subCat.forEach(r => {
+      if(r.tipo_paro==='Paro Planificado')   mapP[r.falla]  = (mapP[r.falla]||0)+r.minutos;
+      else                                    mapNP[r.falla] = (mapNP[r.falla]||0)+r.minutos;
+    });
+    const topP  = Object.entries(mapP).sort((a,b)=>b[1]-a[1])[0];
+    const topNP = Object.entries(mapNP).sort((a,b)=>b[1]-a[1])[0];
+    catTopCauses[cat] = {
+      plan:   topP  ? {name:topP[0],  min:Math.round(topP[1])}  : null,
+      noPlan: topNP ? {name:topNP[0], min:Math.round(topNP[1])} : null
+    };
+  });
+
+  dx(id);
+  CH[id] = new Chart(document.getElementById(id), {
+    type:'doughnut',
+    data:{labels:cats, datasets:[{data:vals,
+      backgroundColor:cats.map(c=>CAT_C[c]||CC.blu),
+      borderColor:'rgba(10,15,30,.8)', borderWidth:3}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'42%',
+      plugins:{
+        legend:{position:'bottom', labels:{
+          color:'rgba(255,255,255,.9)', font:{size:9}, padding:8,
+          generateLabels: ch => {
+            const ds = ch.data.datasets[0];
+            return ch.data.labels.map((l,i) => ({
+              text:`${l}  ${(ds.data[i]/total*100).toFixed(1)}%`,
+              fillStyle:ds.backgroundColor[i], hidden:false, index:i,
+              fontColor:'rgba(255,255,255,.9)', strokeStyle:'transparent'
+            }));
+          }
+        }},
+        tooltip:{
+          callbacks:{
+            label: ctx => {
+              const pct = (ctx.raw/total*100).toFixed(1);
+              return [`${ctx.label}: ${fmt(ctx.raw)} min (${pct}%)`];
+            },
+            afterLabel: ctx => {
+              const cat = ctx.label;
+              const top = catTopCauses[cat];
+              if(!top) return [];
+              const lines = [''];
+              if(top.plan)   lines.push(`✅ Plan.:     "${top.plan.name}" · ${fmt(top.plan.min)} min`);
+              if(top.noPlan) lines.push(`🔴 No Plan.:  "${top.noPlan.name}" · ${fmt(top.noPlan.min)} min`);
+              if(!top.plan && !top.noPlan) lines.push('Sin causas registradas');
+              return lines;
+            }
+          }
+        }
+      }
+    },
+    plugins:[{id:'pct', afterDraw(ch){
+      const{ctx,data}=ch; const ds=data.datasets[0]; const meta=ch.getDatasetMeta(0);
+      ctx.save();
+      meta.data.forEach((arc,i)=>{
+        const pct=(ds.data[i]/total*100).toFixed(1);
+        if(parseFloat(pct)<5)return;
+        const angle=(arc.startAngle+arc.endAngle)/2;
+        const r=(arc.innerRadius+arc.outerRadius)/2;
+        const x=arc.x+Math.cos(angle)*r, y=arc.y+Math.sin(angle)*r;
+        ctx.fillStyle='rgba(255,255,255,.95)'; ctx.font='bold 10px Consolas';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(pct+'%',x,y);
+      });
+      ctx.restore();
+    }}]
+  });
+}
+
+/* AREA UPDATE */
+function getAreaOpts(pfx,area){
+  return{año:sv(pfx+'A'),mes:sv(pfx+'M'),sem:sv(pfx+'S'),dia:sv(pfx+'D'),
+    tipo:sv(pfx+'T'),turno:sv(pfx+'Tu'),area};
+}
+function updateAreaTP(pfx,area,lines){
+  const o=getAreaOpts(pfx,area);
+  const pd=fpTP(o);
+  const td=ftTP({año:o.año,mes:o.mes,sem:o.sem,dia:o.dia,lines});
+  const lActual=[...new Set(pd.map(r=>r.linea))].filter(l=>lines.includes(l)).sort();
+  buildKpis(pfx+'Kpis',pd,td);
+  buildLC(pfx+'LC',pd,td,lActual);
+  buildTC(pfx+'TC',pd,lActual);
+  // Global donut
+  const cm={};pd.forEach(r=>{cm[r.categoria]=(cm[r.categoria]||0)+r.minutos;});
+  const cats=Object.keys(cm).sort((a,b)=>cm[b]-cm[a]);
+  mkDonutEnhanced(pfx+'Don',cats,cats.map(c=>Math.round(cm[c])),pd);
+  // Global stack — with drill-down
+  v6ddBar('dd_'+pfx+'Stk', function(level,ctx){
+    const lbls=v6ddGetLabels(pd,td,level,ctx);
+    const plan=lbls.keys.map(k=>{const s=v6FilterByKey(pd,k,level);return Math.round(s.filter(r=>r.tipo_paro==='Paro Planificado').reduce((a,r)=>a+r.minutos,0));});
+    const nopl=lbls.keys.map(k=>{const s=v6FilterByKey(pd,k,level);return Math.round(s.filter(r=>r.tipo_paro==='Paro No Planificado').reduce((a,r)=>a+r.minutos,0));});
+    mkBarStk(pfx+'Stk',lbls.labels,[
+      {label:'Planificado',data:plan,backgroundColor:'rgba(34,197,94,.75)',borderRadius:3,stack:'s'},
+      {label:'No Planificado',data:nopl,backgroundColor:'rgba(239,68,68,.85)',borderRadius:3,stack:'s'}]);
+  }, 'mes', {});
+  // Disp line chart
+  mkDispLine(pfx+'DispLine',lActual,pd,td);
+  // Line groups
+  buildLineGroups(pfx+'Lines',pd,td,lActual,pfx);
+  // Top 3 causas — with drill-down buttons
+  v6ddBar('dd_'+pfx+'Top3Plan', function(level,ctx){
+    const lbls=v6ddGetLabels(pd,td,level,ctx);
+    const subPD=pd.filter(r=>r.tipo_paro==='Paro Planificado');
+    const causaMap={};
+    lbls.keys.forEach(k=>{const s=v6FilterByKey(subPD,k,level);s.forEach(r=>{causaMap[r.falla]=(causaMap[r.falla]||0)+r.minutos;});});
+    const top3c=Object.entries(causaMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>e[0]);
+    if(!top3c.length){dx(pfx+'Top3Plan');return;}
+    const ds=top3c.map((c,i)=>{
+      const data=lbls.keys.map(k=>{const s=v6FilterByKey(subPD,k,level);return Math.round(s.filter(r=>r.falla===c).reduce((a,r)=>a+r.minutos,0));});
+      const cols=['rgba(34,197,94,.75)','rgba(59,130,246,.7)','rgba(168,85,247,.7)'];
+      return{label:c.length>20?c.slice(0,18)+'…':c,data,backgroundColor:cols[i]||cols[2],borderRadius:3,stack:'s'};
+    });
+    mkBarStk(pfx+'Top3Plan',lbls.labels,ds);
+  }, 'mes', {});
+  v6ddBar('dd_'+pfx+'Top3NoPlan', function(level,ctx){
+    const lbls=v6ddGetLabels(pd,td,level,ctx);
+    const subPD=pd.filter(r=>r.tipo_paro==='Paro No Planificado');
+    const causaMap={};
+    lbls.keys.forEach(k=>{const s=v6FilterByKey(subPD,k,level);s.forEach(r=>{causaMap[r.falla]=(causaMap[r.falla]||0)+r.minutos;});});
+    const top3c=Object.entries(causaMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>e[0]);
+    if(!top3c.length){dx(pfx+'Top3NoPlan');return;}
+    const ds=top3c.map((c,i)=>{
+      const data=lbls.keys.map(k=>{const s=v6FilterByKey(subPD,k,level);return Math.round(s.filter(r=>r.falla===c).reduce((a,r)=>a+r.minutos,0));});
+      const cols=['rgba(239,68,68,.8)','rgba(245,158,11,.75)','rgba(168,85,247,.65)'];
+      return{label:c.length>20?c.slice(0,18)+'…':c,data,backgroundColor:cols[i]||cols[2],borderRadius:3,stack:'s'};
+    });
+    mkBarStk(pfx+'Top3NoPlan',lbls.labels,ds);
+  }, 'mes', {});
+  // Tables
+  buildTbls(pfx+'Tbls',pd,lActual);
+  // Update active filter pills on sticky bar
+  updateFbarPills(pfx);
+}
+
+function resetAreaTP(pfx){
+  const area=pfx==='tp2'?'ZCIQ':'ZENV';
+  [`${pfx}A`,`${pfx}M`,`${pfx}S`,`${pfx}D`,`${pfx}T`,`${pfx}Tu`].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  updateAreaTP(pfx,area,pfx==='tp2'?ZCIQ_L:ZENV_L);
+  const pillsEl=document.getElementById('fbarPillsTP'+pfx.slice(-1));
+  if(pillsEl)pillsEl.innerHTML='';
+}
+
+/* CASCADE FILTER EVENTS */
+function setupCascadeTP(pfx,msKey,sdKey,updateFn){
+  const mEl=document.getElementById(pfx+'M');
+  const sEl=document.getElementById(pfx+'S');
+  if(mEl)mEl.addEventListener('change',()=>{
+    cascMesSem2(pfx,msKey,sdKey);updateFn();});
+  if(sEl)sEl.addEventListener('change',()=>{
+    cascSemDia2(pfx,sdKey);updateFn();});
+  // Wire ALL other filters: Año, Día, Tipo Paro, Turno
+  [pfx+'A', pfx+'D', pfx+'T', pfx+'Tu'].forEach(id=>{
+    const e=document.getElementById(id);
+    if(e) e.addEventListener('change', updateFn);
+  });
+}
+function cascMesSem2(pfx,msKey,sdKey){
+  const mes=sv(pfx+'M');
+  const semEl=document.getElementById(pfx+'S');if(!semEl)return;
+  const idx=IDX_TP[msKey]||{};
+  const sems=mes&&idx[mes]?idx[mes]:[];
+  const cur=semEl.value;
+  semEl.innerHTML='<option value="">Todas</option>'+sems.map(s=>`<option value="${s}">Sem ${s}</option>`).join('');
+  if(sems.map(String).includes(cur))semEl.value=cur;
+  cascSemDia2(pfx,sdKey);
+}
+function cascSemDia2(pfx,sdKey){
+  const sem=sv(pfx+'S');
+  const diaEl=document.getElementById(pfx+'D');if(!diaEl)return;
+  const idx=IDX_TP[sdKey]||IDX_TP['SD']||{};
+  const dias=sem&&idx[sem]?idx[sem]:[];
+  const cur=diaEl.value;
+  diaEl.innerHTML='<option value="">Todos</option>'+dias.map(d=>`<option value="${d}">Día ${d}</option>`).join('');
+  if(dias.map(String).includes(cur))diaEl.value=cur;
+}
+
+/* EXCEL UPLOAD */
+
+/* STICKY FILTER BAR */
+function toggleFbar(pfx){
+  const inner=document.getElementById('fbarInner'+pfx.slice(-1));
+  const arrow=document.getElementById('fbarArrow'+pfx.slice(-1));
+  if(!inner||!arrow)return;
+  const isOpen=inner.classList.contains('expanded');
+  inner.classList.toggle('expanded',!isOpen);
+  inner.classList.toggle('collapsed',isOpen);
+  arrow.classList.toggle('open',!isOpen);
+}
+
+function updateFbarPills(pfx){
+  const pillsEl=document.getElementById('fbarPillsTP'+pfx.slice(-1));
+  if(!pillsEl)return;
+  const ids={año:pfx+'A',mes:pfx+'M',sem:pfx+'S',dia:pfx+'D',tipo:pfx+'T',turno:pfx+'Tu'};
+  const labels={año:'Año',mes:'Mes',sem:'Sem',dia:'Día',tipo:'Tipo',turno:'Turno'};
+  /* [const dup removed] */
+  let pills='';
+  Object.entries(ids).forEach(([key,id])=>{
+    const el=document.getElementById(id); if(!el||!el.value)return;
+    let val=el.value;
+    if(key==='mes') val=MESES_S[+val]||val;
+    if(key==='sem') val='S'+val;
+    if(key==='tipo') val=val.includes('No')?'No Plan.':'Plan.';
+    if(key==='turno') val='T'+val;
+    pills+=`<span class="fbar-pill">${val}</span>`;
+  });
+  pillsEl.innerHTML=pills;
+}
+
+/* INIT — Set Chart.js global defaults for dark theme */
+Chart.defaults.color = 'rgba(200,215,255,0.75)';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+
+/* ── SHARE / READONLY MODE ──────────────────────────────────────────────────── */
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('readonly')==='1' || params.get('share')==='1'){
+    // Hide upload button and label
+    document.addEventListener('DOMContentLoaded',()=>{
+      const fi = document.getElementById('fi');
+      const lbl = fi ? fi.previousElementSibling : null;
+      if(fi)  fi.style.display='none';
+      if(lbl && lbl.tagName==='LABEL') lbl.style.display='none';
+    });
+  }
+})();
+
+
+
+
+
+// Close modal on Escape key
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') closeShare();
+});
+
+document.getElementById('fDate').textContent=new Date().toLocaleString('es-CL');
+popArea('s3','ZENV');
+setupCascadeTP('s2','MS_ZCIQ','SD_ZCIQ',()=>updateAreaTP('tp2','ZCIQ',ZCIQ_L));
+setupCascadeTP('s3','MS_ZENV','SD_ZENV',()=>updateAreaTP('tp3','ZENV',ZENV_L));
+
+
+/* INIT */
+el('fDate').textContent=new Date().toLocaleString('es-CL');
+popArea('s2','ZCIQ',ZCIQ_L); popArea('s3','ZENV',ZENV_L);
+setupF('s2','ZCIQ',ZCIQ_L); setupF('s3','ZENV',ZENV_L);
+// Init TP screens
+try{
+  popAreaTP('tp2','ZCIQ'); popAreaTP('tp3','ZENV');
+  setupCascadeTP('tp2','MS_ZCIQ','SD_ZCIQ',function(){updateAreaTP('tp2','ZCIQ',ZCIQ_L);});
+  setupCascadeTP('tp3','MS_ZENV','SD_ZENV',function(){updateAreaTP('tp3','ZENV',ZENV_L);});
+}catch(e){console.warn('TP init:',e);}
+// Start on home screen
+goTo('s0', el('tb0'));
+</script>
+</body>
+</html>
