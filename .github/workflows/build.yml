@@ -5,7 +5,13 @@ on:
     paths:
       - 'data/**.xlsx'
       - 'data/**.xls'
-  workflow_dispatch:    # botón manual en GitHub
+      - 'templates/**.html'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -14,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Python 3.11
         uses: actions/setup-python@v5
@@ -26,10 +34,12 @@ jobs:
       - name: Build dashboard
         run: python build_dashboard.py
 
-      - name: Commit y push
+      - name: Commit y push dashboard
         run: |
-          git config user.email "actions@github.com"
-          git config user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
           git add docs/dashboard.html
-          git diff --staged --quiet || git commit -m "🔄 Auto-build $(date '+%d/%m/%Y %H:%M')"
-          git push
+          git diff --staged --quiet && echo "No changes" || (
+            git commit -m "🔄 Auto-build $(date '+%d/%m/%Y %H:%M')"
+            git push
+          )
