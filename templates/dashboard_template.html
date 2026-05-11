@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root{
   --bg:#0a0f1e;--bg2:#0d1529;
@@ -202,6 +204,10 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
 .lgb3{border-top-color:var(--red);}
 .lgb4{border-top-color:var(--amb);}
 
+
+/* PDF export button */
+.pdf-btn-loading{opacity:.6;cursor:not-allowed!important;}
+
 </style>
 </head>
 <body>
@@ -219,6 +225,7 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   </div>
   <div class="nav-r">
     <span style="font-size:10px;color:var(--mut)" id="srcLbl">Temporada 25-26</span>
+    <button class="upbtn" id="btnPdf" onclick="exportPDF()" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#f87171;">📄 Informe PDF</button>
     <label class="upbtn" for="fi">📂 Cargar Excel</label>
     <input type="file" id="fi" accept=".xlsx,.xls">
   </div>
@@ -653,7 +660,7 @@ Chart.defaults.color='rgba(200,215,255,0.75)';
 
 const fmt=n=>n==null?'—':Math.round(n).toLocaleString('es-CL');
 const fmtD=n=>n==null?'—':n.toFixed(1);
-const fmtK=n=>n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':fmt(n);
+const fmtK=n=>fmt(n);  // sin abreviaciones K/M
 function sv(id){const e=document.getElementById(id);return e?e.value:'';}
 function el(id){return document.getElementById(id);}
 function dx(id){if(CH[id]){try{CH[id].destroy();}catch(e){}delete CH[id];}}
@@ -1030,7 +1037,7 @@ function buildKpiS3(pd){
   el('s3Kpis').innerHTML=
     '<div class="kpi kb"><div class="klbl">Toneladas Reales</div><div class="kval">'+ton.toFixed(1)+'</div><div class="ksub">producción total</div></div>'+
     kpiCumpStr+
-    '<div class="kpi kg"><div class="klbl">Cajas Producidas</div><div class="kval">'+fmtK(cajas)+'</div><div class="ksub">total período</div></div>'+
+    '<div class="kpi kg"><div class="klbl">Cajas Producidas</div><div class="kval">'+fmt(cajas)+'</div><div class="ksub">total período</div></div>'+
     '<div class="kpi '+rc3+'"><div class="klbl">Rendimiento IQF</div><div class="kval">'+rend3.toFixed(1)+'%</div><div class="ksub">Kg Aprobados ÷ Kg Ingresados</div></div>'+
     '<div class="kpi kc"><div class="klbl">Kg Aprobados</div><div class="kval">'+fmtK(kgAp)+'</div><div class="ksub">materia prima OK</div></div>'+
     '<div class="kpi '+bc+'"><div class="klbl">B/Min Promedio</div><div class="kval">'+bpm.toFixed(1)+'</div><div class="ksub">Std: '+bpmS.toFixed(1)+' · Bolsas/min</div></div>'+
@@ -1452,7 +1459,13 @@ function buildS3Lines(pd){
     var lTeoBol=sub.reduce(function(a,r){return a+r.teo_bolsas;},0);
     var lMCajPct=lTeoCaj>0?(lMCaj/lTeoCaj*100):0;
     var lMBolPct=lTeoBol>0?(lMBol/lTeoBol*100):0;
-    var lProgCajas=PROG.reduce(function(a,r){return a+r.cajas_prog;},0);
+    var o3s=getOpts('s3','ZENV');
+    var lProgFilt=PROG.filter(function(r){
+      return(!o3s.año||String(r.año||'')==o3s.año||!r.año)&&
+             (!o3s.mes||(new Date(r.fecha+'T12:00:00').getMonth()+1)==+o3s.mes)&&
+             (!o3s.dia||(new Date(r.fecha+'T12:00:00').getDate())==+o3s.dia);
+    });
+    var lProgCajas=lProgFilt.reduce(function(a,r){return a+r.cajas_prog;},0);
     var lPctCump=lProgCajas>0?(cajas/lProgCajas*100):0;
     var lcc=lPctCump>=100?'var(--grn)':lPctCump>=85?'var(--amb)':'var(--red)';
     var col=LINE_COLS[i%LINE_COLS.length];
@@ -1462,15 +1475,15 @@ function buildS3Lines(pd){
       '<div class="lghead" onclick="toggleLG(this)">'+
         '<div class="lgh-dot" style="background:'+col+'"></div>'+
         '<span class="lgh-title">'+(LMAP[l]||l)+'</span>'+
-        '<span class="lgh-stats">Ton: '+ton.toFixed(1)+' · Cajas: '+fmtK(cajas)+' · B/Min: '+bpm.toFixed(1)+'/'+bpmS.toFixed(1)+' std</span>'+
+        '<span class="lgh-stats">Ton: '+ton.toFixed(1)+' · Cajas: '+fmt(cajas)+' · B/Min: '+bpm.toFixed(1)+'/'+bpmS.toFixed(1)+' std</span>'+
         '<span class="lgh-arrow">▼</span>'+
       '</div>'+
       '<div class="lgbody">'+
         '<div class="lkpis">'+
           '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn)">'+ton.toFixed(1)+'</div><div class="lksub">toneladas</div></div>'+
           '<div class="lk"><div class="lklbl">Cajas Producidas</div><div class="lkval" style="color:var(--acc2)">'+fmtK(cajas)+'</div><div class="lksub">unidades</div></div>'+
-          (lProgCajas>0?'<div class="lk"><div class="lklbl">Cajas Prog.</div><div class="lkval" style="color:var(--acc2)">'+fmtK(lProgCajas)+'</div></div>':'')+ 
-          (lProgCajas>0?'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+lcc+'">'+lPctCump.toFixed(1)+'%</div></div>':'')+
+          '<div class="lk"><div class="lklbl">Cajas Prog.</div><div class="lkval" style="color:var(--acc2)">'+fmt(lProgCajas)+'</div><div class="lksub">'+(lProgCajas>0?'según programa':'sin programa')+'</div></div>'+
+          (lProgCajas>0?'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+lcc+'">'+lPctCump.toFixed(1)+'%</div><div class="lksub">'+fmt(cajas)+' reales</div></div>':'')+
           '<div class="lk"><div class="lklbl">B/Min Real</div><div class="lkval" style="color:var(--amb)">'+bpm.toFixed(1)+'</div><div class="lksub">bolsas/min</div></div>'+
           '<div class="lk"><div class="lklbl">B/Min Std</div><div class="lkval" style="color:var(--mut)">'+bpmS.toFixed(1)+'</div></div>'+
           '<div class="lk"><div class="lklbl">Merma Cajas</div><div class="lkval" style="color:var(--red)">'+lMCajPct.toFixed(1)+'%</div><div class="lksub">'+fmt(lMCaj)+' und</div></div>'+
@@ -1567,9 +1580,14 @@ function buildSkuCharts(){
   var pd=window._lastS3||PROD.filter(function(r){return r.area==='ZENV';});
   var sub=espFilt?pd.filter(function(r){return r.especie===espFilt;}):pd;
   var skuMap={};
+  // Get cajas programadas per SKU
+  var progMap={};
+  PROG.forEach(function(r){if(r.sku){progMap[r.sku]=(progMap[r.sku]||0)+r.cajas_prog;}});
+
   sub.forEach(function(r){
     if(!r.sku)return;
-    if(!skuMap[r.sku])skuMap[r.sku]={ton:0,cajas:0,n:0,mCaj:0,mBol:0,teoC:0,teoB:0};
+    if(!skuMap[r.sku])skuMap[r.sku]={ton:0,cajas:0,n:0,mCaj:0,mBol:0,teoC:0,teoB:0,cajaProg:0};
+    skuMap[r.sku].cajaProg = progMap[r.sku]||0;
     skuMap[r.sku].ton   +=r.ton_real;
     skuMap[r.sku].cajas +=r.cajas;
     skuMap[r.sku].n++;
@@ -1636,7 +1654,7 @@ function buildSkuCharts(){
     '<table><thead><tr>'+
       '<th>SKU</th>'+
       '<th>Ton.</th>'+
-      '<th>Cajas</th>'+
+      '<th>Cajas</th><th>Cajas Prog.</th><th>Cumpl.%</th>'+
       '<th style="color:#fca5a5">Merma Cajas</th>'+
       '<th style="color:#fca5a5">Merma Cajas %</th>'+
       '<th style="color:#fcd34d">Merma Bolsas</th>'+
@@ -2187,11 +2205,30 @@ function buildS3EspCols(l,sub){
           '<div style="width:9px;height:9px;border-radius:50%;background:'+ecol+'"></div>'+
           '<span style="font-size:12px;font-weight:700;color:var(--txt)">'+(ESP_ICONS[esp]||'🌿')+' '+esp+'</span>'+
         '</div>'+
-        '<div style="padding:0 10px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">'+
-          '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn);font-size:13px">'+ton.toFixed(1)+'</div></div>'+
-          '<div class="lk"><div class="lklbl">Cajas</div><div class="lkval" style="color:var(--acc2);font-size:13px">'+fmtK(cajas)+'</div></div>'+
-          '<div class="lk" style="grid-column:1/-1"><div class="lklbl">B/Min</div><div class="lkval" style="color:var(--amb);font-size:14px">'+bpm.toFixed(1)+'</div></div>'+
-        '</div>'+
+        (function(){
+          var eMCaj=esub.reduce(function(a,r){return a+Math.max(0,r.con_cajas-r.teo_cajas);},0);
+          var eMBol=esub.reduce(function(a,r){return a+Math.max(0,r.con_bolsas-r.teo_bolsas);},0);
+          var eTeoCaj=esub.reduce(function(a,r){return a+r.teo_cajas;},0);
+          var eTeoBol=esub.reduce(function(a,r){return a+r.teo_bolsas;},0);
+          var eMCajPct=eTeoCaj>0?(eMCaj/eTeoCaj*100):0;
+          var eMBolPct=eTeoBol>0?(eMBol/eTeoBol*100):0;
+          var bpmSArr=esub.filter(function(r){return r.bpm_std>0;}).map(function(r){return r.bpm_std;});
+          var bpmS=bpmSArr.length?bpmSArr.reduce(function(a,b){return a+b;})/bpmSArr.length:0;
+          var eProg=PROG.filter(function(r){return r.sku&&esub.some(function(s){return s.sku===r.sku;});});
+          var eCajProg=eProg.reduce(function(a,r){return a+r.cajas_prog;},0);
+          var ePctCump=eCajProg>0?(cajas/eCajProg*100):0;
+          var ecc=ePctCump>=100?'var(--grn)':ePctCump>=85?'var(--amb)':'var(--red)';
+          return '<div style="padding:0 10px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">'+
+            '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn);font-size:13px">'+ton.toFixed(1)+'</div></div>'+
+            '<div class="lk"><div class="lklbl">Cajas Producidas</div><div class="lkval" style="color:var(--acc2);font-size:13px">'+fmt(cajas)+'</div></div>'+
+            (eCajProg>0?'<div class="lk"><div class="lklbl">Cajas Prog.</div><div class="lkval" style="color:var(--acc2);font-size:13px">'+fmt(eCajProg)+'</div></div>':'<div class="lk"></div>')+
+            (eCajProg>0?'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+ecc+';font-size:13px">'+ePctCump.toFixed(1)+'%</div><div class="lksub">'+fmt(cajas)+' reales</div></div>':'')+
+            '<div class="lk"><div class="lklbl">B/Min Real</div><div class="lkval" style="color:var(--amb);font-size:13px">'+bpm.toFixed(1)+'</div></div>'+
+            '<div class="lk"><div class="lklbl">B/Min Std</div><div class="lkval" style="color:var(--mut);font-size:13px">'+bpmS.toFixed(1)+'</div></div>'+
+            '<div class="lk"><div class="lklbl">Merma Cajas</div><div class="lkval" style="color:var(--red);font-size:13px">'+eMCajPct.toFixed(1)+'%</div><div class="lksub">'+fmt(eMCaj)+' und</div></div>'+
+            '<div class="lk"><div class="lklbl">Merma Bolsas</div><div class="lkval" style="color:var(--amb);font-size:13px">'+eMBolPct.toFixed(1)+'%</div><div class="lksub">'+fmt(eMBol)+' und</div></div>'+
+          '</div>';
+        })()+
         // SKU filter for this especie
         (function(){var skus=[...new Set(esub.map(function(r){return r.sku;}).filter(Boolean))].sort();
           return skus.length?'<div style="padding:0 10px 6px;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--acc2);margin-bottom:3px;">SKU</div>'+
@@ -3201,6 +3238,354 @@ document.getElementById('fDate').textContent=new Date().toLocaleString('es-CL');
 popArea('s3','ZENV');
 setupCascadeTP('s2','MS_ZCIQ','SD_ZCIQ',()=>updateAreaTP('tp2','ZCIQ',ZCIQ_L));
 setupCascadeTP('s3','MS_ZENV','SD_ZENV',()=>updateAreaTP('tp3','ZENV',ZENV_L));
+
+
+/* ══ PDF EXPORT ══════════════════════════════════════════════════════════ */
+// ═══════════════════════════════════════════════════════════════════════════
+// PDF EXPORT — Informe Ejecutivo Semana/Mes anterior
+// ═══════════════════════════════════════════════════════════════════════════
+
+function exportPDF(){
+  var btn = el('btnPdf');
+  if(btn){ btn.textContent='⏳ Generando...'; btn.disabled=true; }
+
+  try{
+    // ── Determine current screen ─────────────────────────────────────────
+    var screens = ['s2','s3','tp2','tp3'];
+    var activeScreen = screens.find(function(id){ var e=el(id); return e&&e.classList.contains('on'); }) || 's2';
+    var screenNames = {s2:'Selección (ZCIQ)', s3:'Envasado (ZENV)',
+                       tp2:'Tiempos Perdidos — Selección', tp3:'Tiempos Perdidos — Envasado'};
+
+    // ── Compute periods ──────────────────────────────────────────────────
+    var today    = new Date();
+    var todayDay = today.getDay(); // 0=Sun
+    // Last week: Mon-Sun
+    var lastMonday = new Date(today);
+    lastMonday.setDate(today.getDate() - todayDay - 6);
+    var lastSunday  = new Date(lastMonday);
+    lastSunday.setDate(lastMonday.getDate() + 6);
+    // Last month
+    var lastMonthDate = new Date(today.getFullYear(), today.getMonth()-1, 1);
+    var lastMonthYear = lastMonthDate.getFullYear();
+    var lastMonthNum  = lastMonthDate.getMonth() + 1;
+
+    // Filter helpers
+    function inLastWeek(r){
+      if(!r.fecha) return false;
+      var p=r.fecha.split('-');
+      var d=new Date(+p[0],+p[1]-1,+p[2]);
+      return d>=lastMonday && d<=lastSunday;
+    }
+    function inLastMonth(r){
+      return r.año===lastMonthYear && r.mes===lastMonthNum;
+    }
+
+    // ── Gather data by screen ────────────────────────────────────────────
+    var reportData = buildReportData(activeScreen, inLastWeek, inLastMonth,
+                                     lastMonday, lastSunday, lastMonthYear, lastMonthNum);
+
+    // ── Build PDF ────────────────────────────────────────────────────────
+    var { jsPDF } = window.jspdf;
+    var doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+
+    var pageW = 210, pageH = 297;
+    var margin = 14, colW = (pageW - margin*2);
+    var y = margin;
+
+    // Colors
+    var DARK  = [10,15,30];
+    var ACCENT= [96,165,250];
+    var GREEN = [52,211,153];
+    var RED   = [248,113,113];
+    var AMB   = [251,191,36];
+    var WHITE = [238,242,255];
+    var GRAY  = [100,116,139];
+
+    // ── Helper functions ─────────────────────────────────────────────────
+    function setFill(rgb){ doc.setFillColor(rgb[0],rgb[1],rgb[2]); }
+    function setFont(rgb){ doc.setTextColor(rgb[0],rgb[1],rgb[2]); }
+
+    function header(){
+      // Dark background bar
+      setFill(DARK); doc.rect(0,0,pageW,20,'F');
+      // COMFRUT logo area
+      setFill(ACCENT); doc.roundedRect(margin,4,12,12,2,2,'F');
+      setFont([255,255,255]); doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.text('CF', margin+6, 11.5, {align:'center'});
+      // Title
+      setFont(WHITE); doc.setFontSize(13); doc.setFont('helvetica','bold');
+      doc.text('Informe Ejecutivo · '+screenNames[activeScreen], margin+16, 10);
+      setFont(GRAY); doc.setFontSize(7); doc.setFont('helvetica','normal');
+      doc.text('Planta Curicó · COMFRUT · Temporada 2025–2026', margin+16, 15);
+      // Date
+      doc.text('Generado: '+new Date().toLocaleDateString('es-CL'), pageW-margin, 15, {align:'right'});
+      y = 26;
+    }
+
+    function sectionTitle(txt, rgb){
+      if(y > pageH-30){ doc.addPage(); header(); }
+      setFill(rgb||ACCENT);
+      doc.roundedRect(margin, y, colW, 7, 1, 1, 'F');
+      setFont([255,255,255]); doc.setFontSize(8); doc.setFont('helvetica','bold');
+      doc.text(txt.toUpperCase(), margin+3, y+4.8);
+      y += 10;
+    }
+
+    function kpiGrid(kpis){
+      // kpis = [{label, value, sub, color}]
+      var cols = Math.min(kpis.length, 4);
+      var kw   = colW/cols - 2;
+      var kh   = 18;
+      if(y + kh > pageH-20){ doc.addPage(); header(); }
+      kpis.forEach(function(k, i){
+        var col = i % cols;
+        var row = Math.floor(i/cols);
+        var kx  = margin + col*(kw+2);
+        var ky  = y + row*(kh+2);
+        // Card background
+        doc.setFillColor(20,30,60); doc.roundedRect(kx, ky, kw, kh, 1,1,'F');
+        // Top accent line
+        var rgb = k.color||ACCENT;
+        doc.setDrawColor(rgb[0],rgb[1],rgb[2]); doc.setLineWidth(0.8);
+        doc.line(kx, ky, kx+kw, ky);
+        // Label
+        setFont(GRAY); doc.setFontSize(6); doc.setFont('helvetica','normal');
+        doc.text((k.label||'').toUpperCase(), kx+3, ky+4.5);
+        // Value
+        doc.setTextColor(rgb[0],rgb[1],rgb[2]); doc.setFontSize(11); doc.setFont('helvetica','bold');
+        doc.text(String(k.value||'—'), kx+3, ky+11);
+        // Sub
+        setFont(GRAY); doc.setFontSize(5.5); doc.setFont('helvetica','normal');
+        doc.text(String(k.sub||''), kx+3, ky+16);
+      });
+      var rows = Math.ceil(kpis.length/cols);
+      y += rows*(kh+2) + 4;
+    }
+
+    function tableSection(headers, rows, title){
+      if(!rows||!rows.length) return;
+      if(y > pageH-40){ doc.addPage(); header(); }
+      // Sub-title
+      setFont(GRAY); doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.text(title, margin, y); y+=4;
+      // Header row
+      var cw = colW/headers.length;
+      setFill([20,30,60]); doc.rect(margin, y, colW, 6, 'F');
+      setFont(ACCENT); doc.setFontSize(6); doc.setFont('helvetica','bold');
+      headers.forEach(function(h,i){ doc.text(h, margin+i*cw+2, y+4); });
+      y += 6;
+      // Data rows
+      rows.slice(0,12).forEach(function(row,ri){
+        if(y > pageH-15){ doc.addPage(); header(); }
+        doc.setFillColor(ri%2===0?[15,25,50][0]:10, ri%2===0?[15,25,50][1]:15, ri%2===0?[15,25,50][2]:35);
+        doc.setFillColor(ri%2===0?15:10, ri%2===0?25:15, ri%2===0?50:35);
+        doc.rect(margin, y, colW, 5.5, 'F');
+        setFont(WHITE); doc.setFontSize(6); doc.setFont('helvetica','normal');
+        row.forEach(function(cell,ci){ doc.text(String(cell||''), margin+ci*cw+2, y+3.8); });
+        y += 5.5;
+      });
+      y += 4;
+    }
+
+    function periodLabel(label, start, endD, monthYear, monthNum){
+      if(y > pageH-10){ doc.addPage(); header(); }
+      setFont(ACCENT); doc.setFontSize(9); doc.setFont('helvetica','bold');
+      var periodStr = label==='semana'
+        ? 'Semana anterior: '+start.toLocaleDateString('es-CL')+' – '+endD.toLocaleDateString('es-CL')
+        : 'Mes anterior: '+MESES_F[monthNum]+' '+monthYear;
+      doc.text('📅 '+periodStr, margin, y); y+=7;
+    }
+
+    // ── RENDER REPORT ────────────────────────────────────────────────────
+    header();
+
+    // Page 1: Last week
+    sectionTitle('Semana Anterior', [59,130,246]);
+    periodLabel('semana', lastMonday, lastSunday);
+    renderSection(doc, reportData.semana, activeScreen, kpiGrid, tableSection, sectionTitle);
+
+    // Page 2: Last month
+    doc.addPage(); header();
+    sectionTitle('Mes Anterior', [52,211,153]);
+    periodLabel('mes', null, null, lastMonthYear, lastMonthNum);
+    renderSection(doc, reportData.mes, activeScreen, kpiGrid, tableSection, sectionTitle);
+
+    // Footer on all pages
+    var total = doc.getNumberOfPages();
+    for(var i=1;i<=total;i++){
+      doc.setPage(i);
+      setFill([10,15,30]); doc.rect(0,pageH-8,pageW,8,'F');
+      setFont(GRAY); doc.setFontSize(6);
+      doc.text('COMFRUT · Planta Curicó · Dashboard Producción', margin, pageH-3);
+      doc.text('Página '+i+' de '+total, pageW-margin, pageH-3, {align:'right'});
+    }
+
+    // ── Save ──────────────────────────────────────────────────────────────
+    var fileName = 'Informe_'+screenNames[activeScreen].replace(/[^a-zA-Z0-9]/g,'_')+'_'+
+      new Date().toLocaleDateString('es-CL').replace(/\//g,'-')+'.pdf';
+    doc.save(fileName);
+
+  } catch(err){
+    alert('Error generando PDF: '+err.message);
+    console.error(err);
+  } finally {
+    if(btn){ btn.textContent='📄 Informe PDF'; btn.disabled=false; }
+  }
+}
+
+// ── Build report data ─────────────────────────────────────────────────────
+function buildReportData(screen, inWeek, inMonth, wkStart, wkEnd, mYear, mNum){
+  var result = {semana:{}, mes:{}};
+
+  if(screen==='s2'||screen==='s3'){
+    var area  = screen==='s2'?'ZCIQ':'ZENV';
+    var lines = screen==='s2'?ZCIQ_L:ZENV_L;
+    ['semana','mes'].forEach(function(p){
+      var filterFn = p==='semana'?inWeek:inMonth;
+      var pd = PROD.filter(function(r){return r.area===area && filterFn(r);});
+      result[p] = computeProdKpis(pd, screen, lines);
+    });
+  } else {
+    var area  = screen==='tp2'?'ZCIQ':'ZENV';
+    var lines = screen==='tp2'?ZCIQ_L:ZENV_L;
+    ['semana','mes'].forEach(function(p){
+      var filterFn = p==='semana'?inWeek:inMonth;
+      var pd = PD.filter(function(r){return filterFn(r) && lines.includes(r.linea);});
+      var td = TD.filter(function(r){return filterFn(r) && lines.includes(r.linea);});
+      result[p] = computeTPKpis(pd, td, lines);
+    });
+  }
+  return result;
+}
+
+function computeProdKpis(pd, screen, lines){
+  if(!pd.length) return {kpis:[], tables:[]};
+  var kpis=[], tables=[];
+
+  if(screen==='s2'){
+    var kgIn  = pd.reduce(function(a,r){return a+r.kg_ingresados;},0);
+    var iqf   = pd.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+    var rend  = kgIn>0?(iqf/kgIn*100):0;
+    var pure  = pd.reduce(function(a,r){return a+r.kg_puro;},0);
+    var jugo  = pd.reduce(function(a,r){return a+r.kg_jugo;},0);
+    var esps  = [...new Set(pd.map(function(r){return r.especie;}).filter(Boolean))];
+    kpis=[
+      {label:'Kg Ingresados',    value:fmt(kgIn),       sub:'materia prima',         color:[96,165,250]},
+      {label:'IQF Aprobado',     value:fmt(iqf),        sub:'kg aprobados',           color:[52,211,153]},
+      {label:'Rendimiento IQF',  value:rend.toFixed(1)+'%', sub:'meta ≥ 85%',         color:rend>=85?[52,211,153]:rend>=75?[251,191,36]:[248,113,113]},
+      {label:'Kg Pure',          value:fmt(pure),       sub:'subproducto',            color:[168,85,247]},
+      {label:'Kg Jugo',          value:fmt(jugo),       sub:'subproducto',            color:[245,158,11]},
+      {label:'Especies',         value:esps.length,     sub:esps.join(', '),          color:[96,165,250]},
+    ];
+    // Table by line
+    var lineRows=[];
+    lines.forEach(function(l){
+      var sub=pd.filter(function(r){return r.linea===l;});
+      if(!sub.length)return;
+      var kIn=sub.reduce(function(a,r){return a+r.kg_ingresados;},0);
+      var iqfL=sub.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+      var rL=kIn>0?(iqfL/kIn*100):0;
+      lineRows.push([LMAP[l]||l, fmt(kIn), fmt(iqfL), rL.toFixed(1)+'%']);
+    });
+    tables=[{title:'Resumen por Línea', headers:['Línea','Kg Ingresados','IQF Aprobado','Rend.%'], rows:lineRows}];
+
+    // Top especies
+    var espRows=[];
+    [...new Set(pd.map(function(r){return r.especie;}).filter(Boolean))].sort().forEach(function(esp){
+      var s=pd.filter(function(r){return r.especie===esp;});
+      var k=s.reduce(function(a,r){return a+r.kg_ingresados;},0);
+      var q=s.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+      var rEsp=k>0?((q/k)*100).toFixed(1)+'%':'—'; espRows.push([esp, fmt(k), fmt(q), rEsp]);
+    });
+    tables.push({title:'Resumen por Especie', headers:['Especie','Kg Ing.','IQF Aprobado','Rend.%'], rows:espRows});
+
+  } else { // s3 Envasado
+    var ton   = pd.reduce(function(a,r){return a+r.ton_real;},0);
+    var cajas = pd.reduce(function(a,r){return a+r.cajas;},0);
+    var bpmA  = pd.filter(function(r){return r.bpm_total>0;}).map(function(r){return r.bpm_total;});
+    var bpm   = bpmA.length?bpmA.reduce(function(a,b){return a+b;})/bpmA.length:0;
+    var cajProg=PROG.reduce(function(a,r){return a+r.cajas_prog;},0);
+    var pctC  = cajProg>0?(cajas/cajProg*100):0;
+    var mCaj  = pd.reduce(function(a,r){return a+Math.max(0,r.con_cajas-r.teo_cajas);},0);
+    var tCaj  = pd.reduce(function(a,r){return a+r.teo_cajas;},0);
+    var mBol  = pd.reduce(function(a,r){return a+Math.max(0,r.con_bolsas-r.teo_bolsas);},0);
+    var tBol  = pd.reduce(function(a,r){return a+r.teo_bolsas;},0);
+    kpis=[
+      {label:'Toneladas Reales', value:ton.toFixed(1),       sub:'producción total',       color:[52,211,153]},
+      {label:'Cajas Producidas', value:fmt(cajas),           sub:'unidades',               color:[96,165,250]},
+      {label:'Cajas Prog.',      value:cajProg>0?fmt(cajProg):'—', sub:'según programa',   color:[245,158,11]},
+      {label:'Cumplimiento',     value:cajProg>0?pctC.toFixed(1)+'%':'—', sub:'cajas reales vs prog.', color:pctC>=100?[52,211,153]:pctC>=85?[251,191,36]:[248,113,113]},
+      {label:'B/Min Promedio',   value:bpm.toFixed(1),       sub:'bolsas/minuto',          color:[245,158,11]},
+      {label:'Merma Cajas',      value:tCaj>0?(mCaj/tCaj*100).toFixed(1)+'%':'—', sub:fmt(mCaj)+' und', color:[248,113,113]},
+      {label:'Merma Bolsas',     value:tBol>0?(mBol/tBol*100).toFixed(1)+'%':'—', sub:fmt(mBol)+' und', color:[251,191,36]},
+    ];
+    // Table by SKU
+    var skuMap={};
+    pd.forEach(function(r){if(!r.sku)return; if(!skuMap[r.sku])skuMap[r.sku]={ton:0,cajas:0};
+      skuMap[r.sku].ton+=r.ton_real; skuMap[r.sku].cajas+=r.cajas;});
+    var skuRows=Object.entries(skuMap).sort(function(a,b){return b[1].cajas-a[1].cajas;})
+      .slice(0,10).map(function(e){return[e[0].slice(0,35), e[1].ton.toFixed(1), fmt(e[1].cajas)];});
+    tables=[{title:'Top SKUs por Cajas', headers:['SKU','Ton.','Cajas'], rows:skuRows}];
+  }
+  return {kpis:kpis, tables:tables};
+}
+
+function computeTPKpis(pd, td, lines){
+  if(!pd.length&&!td.length) return {kpis:[],tables:[]};
+  var teo   = td.reduce(function(a,r){return a+r.minutos;},0);
+  var efec  = td.reduce(function(a,r){return a+(r.efec_min||0);},0);
+  var disp  = teo>0?(efec/teo*100):0;
+  var tPerd = pd.reduce(function(a,r){return a+r.minutos;},0);
+  var plan  = pd.filter(function(r){return r.tipo_paro==='Paro Planificado';})
+               .reduce(function(a,r){return a+r.minutos;},0);
+  var nopl  = pd.filter(function(r){return r.tipo_paro==='Paro No Planificado';})
+               .reduce(function(a,r){return a+r.minutos;},0);
+  var evNPl = pd.filter(function(r){return r.tipo_paro==='Paro No Planificado';}).length;
+  var mttr  = evNPl>0?(nopl/evNPl):0;
+  var kpis=[
+    {label:'Tiempo Teórico',    value:fmt(teo),         sub:'min planificados',        color:[96,165,250]},
+    {label:'Tiempo Perdido',    value:fmt(tPerd),       sub:pd.length+' eventos',      color:[248,113,113]},
+    {label:'Disponibilidad',    value:disp.toFixed(1)+'%', sub:'meta ≥ 85%',           color:disp>=85?[52,211,153]:disp>=75?[251,191,36]:[248,113,113]},
+    {label:'T. Planificado',    value:fmt(plan),        sub:'colación, inicio...',     color:[251,191,36]},
+    {label:'T. No Planificado', value:fmt(nopl),        sub:'fallas sorpresa',         color:[248,113,113]},
+    {label:'MTTR',              value:mttr.toFixed(1)+' min', sub:'media reparación',  color:[168,85,247]},
+    {label:'% No Planif.',      value:tPerd>0?(nopl/tPerd*100).toFixed(1)+'%':'—', sub:'del total perdido', color:[245,158,11]},
+  ];
+  // Top causas no planificadas
+  var catMap={};
+  pd.filter(function(r){return r.tipo_paro==='Paro No Planificado';}).forEach(function(r){
+    if(!catMap[r.categoria])catMap[r.categoria]={min:0,n:0};
+    catMap[r.categoria].min+=r.minutos; catMap[r.categoria].n++;
+  });
+  var catRows=Object.entries(catMap).sort(function(a,b){return b[1].min-a[1].min;})
+    .slice(0,8).map(function(e){return[e[0],fmt(e[1].min)+' min',e[1].n+' ev.'];});
+  // Top fallas
+  var fallaMap={};
+  pd.filter(function(r){return r.tipo_paro==='Paro No Planificado';}).forEach(function(r){
+    if(!fallaMap[r.falla])fallaMap[r.falla]={min:0,n:0};
+    fallaMap[r.falla].min+=r.minutos; fallaMap[r.falla].n++;
+  });
+  var fallaRows=Object.entries(fallaMap).sort(function(a,b){return b[1].min-a[1].min;})
+    .slice(0,8).map(function(e){return[e[0].slice(0,35),fmt(e[1].min)+' min',e[1].n+' ev.'];});
+  return {kpis:kpis, tables:[
+    {title:'Top Categorías No Planificadas', headers:['Categoría','Minutos','Eventos'], rows:catRows},
+    {title:'Top Fallas No Planificadas',     headers:['Falla','Minutos','Eventos'], rows:fallaRows},
+  ]};
+}
+
+function renderSection(doc, data, screen, kpiGridFn, tableSecFn, secTitleFn){
+  if(!data||(!data.kpis.length&&!data.tables.length)){
+    setFont([251,191,36]); doc.setFontSize(8);
+    doc.text('⚠️  Sin datos para este período.', 14, y+6); y+=14;
+    return;
+  }
+  secTitleFn('Indicadores Clave (KPIs)', [59,130,246]);
+  kpiGridFn(data.kpis);
+  (data.tables||[]).forEach(function(tbl){
+    tableSecFn(tbl.headers, tbl.rows, tbl.title);
+  });
+}
+
 
 
 /* INIT */
