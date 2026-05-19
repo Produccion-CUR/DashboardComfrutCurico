@@ -1,194 +1,470 @@
+#!/usr/bin/env python3
 """
-build_dashboard.py  ·  Planta Curicó · COMFRUT
-═══════════════════════════════════════════════
-Lee el Excel de la carpeta data/ y genera docs/dashboard.html
+build_dashboard.py — Comfrut Dashboard Builder
+Lee el Excel de data/, procesa los datos y los embebe en el template HTML.
+Genera docs/index.html listo para GitHub Pages.
 
-Uso local:   python build_dashboard.py
-GitHub Actions: se ejecuta automáticamente al hacer push del Excel
+Hojas requeridas en el Excel:
+  - "Asistencia + Produccion" → PROD + TD
+  - "Tiempos Perdidos"        → PD
+  - "Programa Envasado"       → PROG (formato wide: fila0=turnos, fila1=fechas, fila2+=cods)
 """
-import os, sys, json, glob
-import pandas as pd
-from collections import defaultdict
 
-# ── Locate Excel ──────────────────────────────────────────────────────────
-BASE = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE, 'data')
-DOCS_DIR = os.path.join(BASE, 'docs')
-TMPL     = os.path.join(BASE, 'templates', 'dashboard_template.html')
+import json
+import math
+import os
+import sys
+import glob
+from datetime import datetime, date
 
-os.makedirs(DOCS_DIR, exist_ok=True)
+try:
+    import openpyxl
+    from openpyxl import load_workbook
+except ImportError:
+    print("ERROR: openpyxl no instalado. Ejecuta: pip install openpyxl")
+    sys.exit(1)
 
-xlsx_files = glob.glob(os.path.join(DATA_DIR, '*.xlsx')) + \
-             glob.glob(os.path.join(DATA_DIR, '*.xls'))
-if not xlsx_files:
-    print("ERROR: No Excel found in data/"); sys.exit(1)
+# ─── Paths ───────────────────────────────────────────────────────────────────
+BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR      = os.path.join(BASE_DIR, "data")
+TEMPLATE_DIR  = os.path.join(BASE_DIR, "templates")
+OUTPUT_DIR    = os.path.join(BASE_DIR, "docs")
+TEMPLATE_FILE = os.path.join(TEMPLATE_DIR, "template.html")
+OUTPUT_FILE   = os.path.join(OUTPUT_DIR, "index.html")
 
-EXCEL = sorted(xlsx_files)[-1]
-print(f"Excel: {os.path.basename(EXCEL)}")
-xl = pd.ExcelFile(EXCEL)
-print(f"Sheets: {xl.sheet_names}")
+# ─── Helpers ─────────────────────────────────────────────────────────────────
+def fmt_fecha(cell_value):
+    """Excel cell → 'YYYY-MM-DD' string."""
+    if cell_value is None:
+        return ""
+    if isinstance(cell_value, (datetime, date)):
+        return cell_value.strftime("%Y-%m-%d")
+    if isinstance(cell_value, (int, float)):
+        # Excel serial date
+        try:
+            d = datetime(1899, 12, 30) + __import__('datetime').timedelta(days=int(cell_value))
+            return d.strftime("%Y-%m-%d")
+        except Exception:
+            return ""
+    s = str(cell_value).strip()
+    return s[:10] if len(s) >= 10 else ""
 
-# ── Helpers ───────────────────────────────────────────────────────────────
-ZCIQ_L = ['S_L01','S_L03','S_L04','S_L05','S_LMANCU','S_MANUAL']
-ZENV_L = ['S_ENV1']
+def safe_float(v, default=0.0):
+    try:
+        return float(v) if v not in (None, "") else default
+    except (ValueError, TypeError):
+        return default
 
-def safe_str(v): return str(v) if pd.notna(v) else ''
-def safe_num(v): return float(v) if pd.notna(v) and str(v).replace('.','').replace('-','').isdigit() else 0.0
-def to_date(v):
-    if pd.isna(v): return None
-    if isinstance(v, (int, float)):
-        try: return pd.Timestamp('1899-12-30') + pd.Timedelta(days=int(v))
-        except: return None
-    try: return pd.Timestamp(v)
-    except: return None
+def safe_int(v, default=0):
+    try:
+        return int(float(v)) if v not in (None, "") else default
+    except (ValueError, TypeError):
+        return default
 
-def build_idx(records, filter_lines=None):
-    MS, MD, SD = defaultdict(set), defaultdict(set), defaultdict(set)
-    for r in records:
-        if filter_lines and r.get('linea') not in filter_lines: continue
-        ms, ss = str(r['mes']), str(r['semana'])
-        MS[ms].add(r['semana']); MD[ms].add(r['dia']); SD[ss].add(r['dia'])
-    return ({k:sorted(v) for k,v in MS.items()},
-            {k:sorted(v) for k,v in MD.items()},
-            {k:sorted(v) for k,v in SD.items()})
+def safe_str(v, default=""):
+    return str(v).strip() if v not in (None, "") else default
 
-# ── Parse Tiempos Perdidos ────────────────────────────────────────────────
-shTP = next((s for s in xl.sheet_names if 'perdid' in s.lower() or 'tiempos' in s.lower()), None)
-PD = []
-if shTP:
-    df = pd.read_excel(xl, shTP)
-    df['Fecha']     = pd.to_datetime(df.get('Fecha'), errors='coerce')
-    df['T.Minutos'] = pd.to_numeric(df.get('T.Minutos'), errors='coerce').fillna(0)
-    df['Semana']    = pd.to_numeric(df.get('Semana'), errors='coerce').fillna(0).astype(int)
-    df['Turno']     = pd.to_numeric(df.get('Turno'), errors='coerce').fillna(1).astype(int)
-    for _, r in df.iterrows():
-        f = r['Fecha']
-        if pd.isna(f): continue
+def iso_week(fecha_str):
+    """'YYYY-MM-DD' → ISO week number (JS compatible formula)."""
+    try:
+        d = datetime.strptime(fecha_str, "%Y-%m-%d")
+        jan1 = datetime(d.year, 1, 1)
+        diff_days = (d - jan1).days
+        jan1_js_day = jan1.isoweekday() % 7  # JS: 0=sun,1=mon,...
+        return math.ceil((diff_days + jan1_js_day + 1) / 7)
+    except Exception:
+        return 0
+
+# ─── Find Excel ───────────────────────────────────────────────────────────────
+def find_excel():
+    patterns = ["*.xlsx", "*.xlsm", "*.xls"]
+    for pat in patterns:
+        files = glob.glob(os.path.join(DATA_DIR, pat))
+        if files:
+            # Use most recently modified
+            files.sort(key=os.path.getmtime, reverse=True)
+            return files[0]
+    return None
+
+# ─── Sheet parsers ────────────────────────────────────────────────────────────
+def parse_asistencia_prod(ws):
+    """
+    Hoja 'Asistencia + Produccion'.
+    Retorna PROD (lista de registros) y TD (lista de tiempos teóricos).
+    """
+    headers = {}
+    PROD = []
+    TD   = []
+    
+    for row in ws.iter_rows():
+        if not headers:
+            # Detect header row
+            row_vals = [str(c.value).strip() if c.value else "" for c in row]
+            if "Inic.tratamiento" in row_vals or "Pto. Trabajo" in row_vals:
+                headers = {v: i for i, v in enumerate(row_vals) if v}
+            continue
+
+        def g(col, default=""):
+            idx = headers.get(col)
+            if idx is None:
+                return default
+            v = row[idx].value
+            return v if v is not None else default
+
+        fecha = fmt_fecha(g("Inic.tratamiento"))
+        if not fecha or len(fecha) < 10:
+            continue
+
+        try:
+            dt = datetime.strptime(fecha, "%Y-%m-%d")
+        except ValueError:
+            continue
+
+        linea = safe_str(g("Pto. Trabajo"))
+        area  = "ZENV" if linea.startswith("S_ENV") else "ZCIQ"
+        sem   = safe_int(g("Semana"))
+
+        prod_row = {
+            "fecha":        fecha,
+            "año":          dt.year,
+            "mes":          dt.month,
+            "dia":          dt.day,
+            "semana":       sem,
+            "turno":        safe_int(g("Turno"), 1),
+            "linea":        linea,
+            "area":         area,
+            "especie":      safe_str(g("Especie")),
+            "sku":          safe_str(g("Desc.Material")),
+            "cod":          safe_str(g("Material")),
+            "ton_real":     safe_float(g("Ton.Real")),
+            "cajas":        safe_float(g("Cajas Produc.")),
+            "bpm_total":    safe_float(g("BPM Total")),
+            "bpm_std":      safe_float(g("BPM Estandar")),
+            "kg_ingresados":safe_float(g("Kilos Ingresados")),
+            "iqf_aprobado": safe_float(g("IQF Aprobado")),
+            "kg_aprobadas": safe_float(g("Kilos Aprobadas")),
+            "kg_puro":      safe_float(g("Kilos Pure")),
+            "kg_jugo":      safe_float(g("Kilos Jugo")),
+            "kg_crumble":   safe_float(g("Kilos Crumble")),
+            "kg_h_pers":    safe_float(g("Produc.(Kg/H/Personas)")),
+            "personas":     safe_float(g("Cant.Personas")),
+            "teo_cajas":    safe_float(g("Teorico Cajas")),
+            "con_cajas":    safe_float(g("Consumo Cajas")),
+            "teo_bolsas":   safe_float(g("Teorico Bolsas")),
+            "con_bolsas":   safe_float(g("Consumo Bolsas")),
+            "teo_min":      safe_float(g("T.Minutos")),
+            "efec_min":     safe_float(g("Tiempo Efec.Min.")),
+        }
+        PROD.append(prod_row)
+
+        td_row = {
+            "fecha":    fecha,
+            "año":      dt.year,
+            "mes":      dt.month,
+            "dia":      dt.day,
+            "semana":   sem,
+            "linea":    linea,
+            "minutos":  safe_float(g("T.Minutos")),
+            "efec_min": safe_float(g("Tiempo Efec.Min.")),
+            "plan_min": safe_float(g("Paros Plan Min.")),
+            "nopl_min": safe_float(g("Paros No Plan Min.")),
+        }
+        TD.append(td_row)
+
+    return PROD, TD
+
+
+def parse_tiempos_perdidos(ws):
+    """Hoja 'Tiempos Perdidos' → PD."""
+    headers = {}
+    PD = []
+
+    for row in ws.iter_rows():
+        if not headers:
+            row_vals = [str(c.value).strip() if c.value else "" for c in row]
+            if "Fecha" in row_vals and "T.Minutos" in row_vals:
+                headers = {v: i for i, v in enumerate(row_vals) if v}
+            continue
+
+        def g(col, default=""):
+            idx = headers.get(col)
+            if idx is None:
+                return default
+            v = row[idx].value
+            return v if v is not None else default
+
+        fecha = fmt_fecha(g("Fecha"))
+        if not fecha or len(fecha) < 10:
+            continue
+
+        try:
+            dt = datetime.strptime(fecha, "%Y-%m-%d")
+        except ValueError:
+            continue
+
         PD.append({
-            'fecha':  f.strftime('%Y-%m-%d'),
-            'año': int(f.year), 'mes': int(f.month), 'dia': int(f.day),
-            'semana': int(r['Semana']), 'turno': int(r['Turno']),
-            'linea':    safe_str(r.get('Pto. Trabajo')),
-            'area':     safe_str(r.get('Clase de Orden')) or 'ZCIQ',
-            'tipo_paro':safe_str(r.get('Tipo de Paro')),
-            'categoria':safe_str(r.get('Desc.Clasifi. del Paro')) or 'Producción',
-            'falla':    safe_str(r.get('Desc.Falla')) or 'SIN DESCRIPCIÓN',
-            'obs':      safe_str(r.get('Observaciones')),
-            'minutos':  float(r['T.Minutos']),
+            "fecha":     fecha,
+            "año":       dt.year,
+            "mes":       dt.month,
+            "dia":       dt.day,
+            "semana":    safe_int(g("Semana")),
+            "turno":     safe_int(g("Turno"), 1),
+            "linea":     safe_str(g("Pto. Trabajo")),
+            "area":      safe_str(g("Clase de Orden"), "ZCIQ"),
+            "tipo_paro": safe_str(g("Tipo de Paro")),
+            "categoria": safe_str(g("Desc.Clasifi. del Paro"), "Producción"),
+            "falla":     safe_str(g("Desc.Falla"), "SIN DESCRIPCIÓN"),
+            "obs":       safe_str(g("Observaciones")),
+            "minutos":   safe_float(g("T.Minutos")),
         })
-print(f"Tiempos Perdidos: {len(PD)} registros")
 
-# ── Parse Asistencia + Produccion ─────────────────────────────────────────
-shAP = next((s for s in xl.sheet_names if 'asistencia' in s.lower() or 'produccion' in s.lower()), xl.sheet_names[0])
-df_ap = pd.read_excel(xl, shAP)
-df_ap['Inic.tratamiento'] = pd.to_datetime(df_ap.get('Inic.tratamiento'), errors='coerce')
-df_ap['Semana'] = pd.to_numeric(df_ap.get('Semana'), errors='coerce').fillna(0).astype(int)
-df_ap['Turno']  = pd.to_numeric(df_ap.get('Turno'), errors='coerce').fillna(0).astype(int)
-NUM_COLS = ['T.Minutos','Tiempo Efec.Min.','Paros Plan Min.','Paros No Plan Min.',
-            'Ton.Real','Cajas Produc.','BPM Total','BPM Estandar','BPM sin PP',
-            'Cant.Personas','Produc.(Kg/H/Personas)','Kilos Ingresados','IQF Aprobado',
-            'Kilos Aprobadas','Kilos Pure','Kilos Jugo','Kilos Crumble',
-            'Teorico Cajas','Consumo Cajas','Teorico Bolsas','Consumo Bolsas']
-for c in NUM_COLS:
-    if c in df_ap.columns:
-        df_ap[c] = pd.to_numeric(df_ap[c], errors='coerce').fillna(0)
+    return PD
 
-PROD, TD = [], []
-for _, r in df_ap.iterrows():
-    f = r['Inic.tratamiento']
-    if pd.isna(f): continue
-    n = lambda k: float(r.get(k, 0) or 0)
-    linea = safe_str(r.get('Pto. Trabajo'))
-    row = {
-        'fecha': f.strftime('%Y-%m-%d'),
-        'año': int(f.year), 'mes': int(f.month), 'dia': int(f.day),
-        'semana': int(r['Semana']), 'turno': int(r['Turno']),
-        'linea': linea, 'area': 'ZENV' if linea == 'S_ENV1' else 'ZCIQ',
-        'especie': safe_str(r.get('Especie')), 'sku': safe_str(r.get('Desc.Material')),
-        'teo_min': n('T.Minutos'), 'efec_min': n('Tiempo Efec.Min.'),
-        'plan_min': n('Paros Plan Min.'), 'nopl_min': n('Paros No Plan Min.'),
-        'kg_ingresados': n('Kilos Ingresados'), 'iqf_aprobado': n('IQF Aprobado'),
-        'kg_puro': n('Kilos Pure'), 'kg_jugo': n('Kilos Jugo'), 'kg_crumble': n('Kilos Crumble'),
-        'ton_real': n('Ton.Real'), 'cajas': n('Cajas Produc.'), 'kg_aprobadas': n('Kilos Aprobadas'),
-        'teo_cajas': n('Teorico Cajas'), 'con_cajas': n('Consumo Cajas'),
-        'teo_bolsas': n('Teorico Bolsas'), 'con_bolsas': n('Consumo Bolsas'),
-        'bpm_total': n('BPM Total'), 'bpm_std': n('BPM Estandar'), 'bpm_sinpp': n('BPM sin PP'),
-        'personas': n('Cant.Personas'), 'kg_h_pers': n('Produc.(Kg/H/Personas)'),
+
+def parse_programa_envasado(ws):
+    """
+    Hoja 'Programa Envasado' (formato wide):
+      fila 0: [None, None, "Turno", 3, 1, 2, 3, 1, 2, ...]
+      fila 1: [None, None, None,  fecha, fecha, fecha, ...]
+      fila 2+: [cod, sku, peso, val, val, val, ...]
+    Retorna lista plana de {fecha, cod, turno, cajas_prog}.
+    """
+    rows = list(ws.iter_rows(values_only=True))
+    if len(rows) < 3:
+        return []
+
+    turno_row = rows[0]   # turnos en col 3+
+    fecha_row = rows[1]   # fechas en col 3+
+    PROG = []
+
+    for row in rows[2:]:
+        cod = row[0]
+        if cod is None or str(cod).strip() == "":
+            continue
+        cod = str(cod).strip()
+
+        for ci in range(3, len(fecha_row)):
+            val = row[ci] if ci < len(row) else None
+            if val is None or val == 0 or val == "":
+                continue
+            try:
+                num_val = float(val)
+            except (ValueError, TypeError):
+                continue
+            if num_val <= 0:
+                continue
+
+            raw_fecha = fecha_row[ci]
+            raw_turno = turno_row[ci]
+            if raw_fecha is None or raw_turno is None:
+                continue
+
+            fecha_str = fmt_fecha(raw_fecha)
+            if not fecha_str or len(fecha_str) < 10:
+                continue
+
+            try:
+                turno = int(float(raw_turno))
+            except (ValueError, TypeError):
+                continue
+
+            PROG.append({
+                "fecha":      fecha_str,
+                "cod":        cod,
+                "turno":      turno,
+                "cajas_prog": num_val,
+            })
+
+    return PROG
+
+
+def build_indices(PD, PROD):
+    """Construye PIDX y IDX (cascade filter indices) compatibles con el JS."""
+    ZCIQ_L = {"S_L01", "S_L03", "S_L04", "S_L05", "S_LMANCU", "S_MANUAL"}
+    ZENV_L = {"S_ENV1"}
+
+    def make_idx():
+        return {"MS": {}, "MD": {}, "SD": {}}
+
+    def add_to(obj, key, val):
+        if key not in obj:
+            obj[key] = []
+        if val not in obj[key]:
+            obj[key].append(val)
+
+    # TP indices (from PD)
+    tp = {
+        "MS": {}, "MD": {}, "SD": {},
+        "MS_ZCIQ": {}, "MD_ZCIQ": {}, "SD_ZCIQ": {},
+        "MS_ZENV": {}, "MD_ZENV": {}, "SD_ZENV": {},
     }
-    PROD.append(row)
-    TD.append({'fecha': row['fecha'], 'año': row['año'], 'mes': row['mes'],
-               'dia': row['dia'], 'semana': row['semana'], 'linea': linea,
-               'minutos': n('T.Minutos'), 'efec_min': n('Tiempo Efec.Min.'),
-               'plan_min': n('Paros Plan Min.'), 'nopl_min': n('Paros No Plan Min.')})
-print(f"Producción: {len(PROD)} registros")
+    for r in PD:
+        mk = str(r["mes"]); sk = str(r["semana"])
+        add_to(tp["MS"], mk, r["semana"]); add_to(tp["MD"], mk, r["dia"]); add_to(tp["SD"], sk, r["dia"])
+        if r["linea"] in ZCIQ_L:
+            add_to(tp["MS_ZCIQ"], mk, r["semana"]); add_to(tp["MD_ZCIQ"], mk, r["dia"]); add_to(tp["SD_ZCIQ"], sk, r["dia"])
+        if r["linea"] in ZENV_L:
+            add_to(tp["MS_ZENV"], mk, r["semana"]); add_to(tp["MD_ZENV"], mk, r["dia"]); add_to(tp["SD_ZENV"], sk, r["dia"])
 
-# ── Build Indices ─────────────────────────────────────────────────────────
-PIDX = {}
-for area, lines in [('ZCIQ', ZCIQ_L), ('ZENV', ZENV_L)]:
-    ms, md, sd = build_idx(PROD, lines)
-    PIDX[f'MS_{area}'] = ms; PIDX[f'MD_{area}'] = md; PIDX[f'SD_{area}'] = sd
+    for obj in tp.values():
+        for k in obj:
+            obj[k] = sorted(set(obj[k]))
 
-ms_all, md_all, sd_all = build_idx(PD, None)
-ms_z,   md_z,   sd_z   = build_idx(PD, ZCIQ_L)
-ms_e,   md_e,   sd_e   = build_idx(PD, ZENV_L)
-IDX = {'MS': ms_all, 'MD': md_all, 'SD': sd_all,
-       'MS_ZCIQ': ms_z, 'MD_ZCIQ': md_z, 'SD_ZCIQ': sd_z,
-       'MS_ZENV': ms_e, 'MD_ZENV': md_e, 'SD_ZENV': sd_e}
+    # PROD indices (from PROD, same structure)
+    pr = {
+        "MS": {}, "MD": {}, "SD": {},
+        "MS_ZCIQ": {}, "MD_ZCIQ": {}, "SD_ZCIQ": {},
+        "MS_ZENV": {}, "MD_ZENV": {}, "SD_ZENV": {},
+    }
+    for r in PROD:
+        mk = str(r["mes"]); sk = str(r["semana"])
+        add_to(pr["MS"], mk, r["semana"]); add_to(pr["MD"], mk, r["dia"]); add_to(pr["SD"], sk, r["dia"])
+        if r["linea"] in ZCIQ_L:
+            add_to(pr["MS_ZCIQ"], mk, r["semana"]); add_to(pr["MD_ZCIQ"], mk, r["dia"]); add_to(pr["SD_ZCIQ"], sk, r["dia"])
+        if r["linea"] in ZENV_L:
+            add_to(pr["MS_ZENV"], mk, r["semana"]); add_to(pr["MD_ZENV"], mk, r["dia"]); add_to(pr["SD_ZENV"], sk, r["dia"])
 
-# ── Line Availability ─────────────────────────────────────────────────────
-all_combos  = sorted(set((r['año'], r['mes']) for r in TD))
-combo_labels = [f"{m:02d}/{y}" for y, m in all_combos]
-line_disp = {}
-for l in ZCIQ_L + ZENV_L:
-    pts = []
-    for (año, mes) in all_combos:
-        sub  = [r for r in TD if r['linea'] == l and r['año'] == año and r['mes'] == mes]
-        teo  = sum(r['minutos'] for r in sub)
-        efec = sum(r['efec_min'] for r in sub)
-        pts.append(round(efec / teo * 100, 1) if teo > 0 else None)
-    line_disp[l] = pts
-LD = {'combos': combo_labels, 'data': line_disp}
+    for obj in pr.values():
+        for k in obj:
+            obj[k] = sorted(set(obj[k]))
 
-# ── Programa Envasado ─────────────────────────────────────────────────────
-shProg = next((s for s in xl.sheet_names if 'programa' in s.lower()), None)
-PROG = []
-if shProg:
-    raw = pd.read_excel(xl, shProg, header=None)
-    if len(raw) >= 3:
-        turno_row = raw.iloc[0]
-        date_row  = raw.iloc[1]
-        for ri in range(2, len(raw)):
-            row = raw.iloc[ri]
-            if pd.isna(row.iloc[0]): continue
-            cod = str(row.iloc[0]); sku = str(row.iloc[1]) if pd.notna(row.iloc[1]) else ''
-            if not sku or sku == 'nan': continue
-            for ci in range(3, len(date_row)):
-                val = row.iloc[ci]
-                if pd.isna(val) or float(str(val).replace(',','') if val else 0) <= 0: continue
-                date_val = date_row.iloc[ci]
-                if pd.isna(date_val): continue
-                try: fecha = pd.Timestamp(date_val).strftime('%Y-%m-%d')
-                except: continue
-                tv = turno_row.iloc[ci]
-                turno = int(tv) if pd.notna(tv) and str(tv).strip().isdigit() else 0
-                PROG.append({'fecha': fecha, 'sku': sku, 'cod': cod,
-                             'turno': turno, 'cajas_prog': float(val)})
-print(f"Programa Envasado: {len(PROG)} registros")
+    return pr, tp  # PIDX, IDX
 
-# ── Generate dashboard.html ───────────────────────────────────────────────
-if not os.path.exists(TMPL):
-    print(f"ERROR: Template not found: {TMPL}"); sys.exit(1)
 
-html = open(TMPL, encoding='utf-8').read()
-html = html.replace('/*PROD_DATA*/', json.dumps(PROD))
-html = html.replace('/*PIDX_DATA*/', json.dumps(PIDX))
-html = html.replace('/*PROG_DATA*/', json.dumps(PROG))
-html = html.replace('/*PD_DATA*/',   json.dumps(PD))
-html = html.replace('/*TD_DATA*/',   json.dumps(TD))
-html = html.replace('/*IDX_DATA*/',  json.dumps(IDX))
-html = html.replace('/*LD_DATA*/',   json.dumps(LD))
+def embed_data(template_html, PROD, PIDX, PROG, IDX):
+    """Reemplaza los null en el template con los datos reales."""
+    def replace_raw(html, name, data):
+        marker_start = f"const {name} = (function(){{ try{{ return "
+        marker_end   = "; }catch(e){ return null; } })();"
+        idx_s = html.find(marker_start)
+        if idx_s == -1:
+            print(f"  WARN: {name} not found in template")
+            return html
+        data_start = idx_s + len(marker_start)
+        idx_e = html.find(marker_end, data_start)
+        if idx_e == -1:
+            print(f"  WARN: {name} end marker not found")
+            return html
+        json_str = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+        return html[:data_start] + json_str + html[idx_e:]
 
-out = os.path.join(DOCS_DIR, 'dashboard.html')
-open(out, 'w', encoding='utf-8').write(html)
-print(f"\n✅ dashboard.html generado → {len(html)//1024} KB")
-print(f"   PROD:{len(PROD)} · PD:{len(PD)} · PROG:{len(PROG)}")
+    html = template_html
+    html = replace_raw(html, "_PROD_RAW", PROD)
+    html = replace_raw(html, "_PIDX_RAW", PIDX)
+    html = replace_raw(html, "_PROG_RAW", PROG)
+    html = replace_raw(html, "_IDX_RAW",  IDX)
+    return html
+
+
+# ─── Main ────────────────────────────────────────────────────────────────────
+def main():
+    print("=" * 60)
+    print("  Comfrut Dashboard Builder")
+    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 60)
+
+    # 1. Find Excel
+    excel_path = find_excel()
+    if not excel_path:
+        print(f"ERROR: No se encontró ningún Excel en {DATA_DIR}/")
+        print("       Sube el archivo .xlsx a la carpeta data/")
+        sys.exit(1)
+    print(f"\n📊 Excel: {os.path.basename(excel_path)}")
+
+    # 2. Load workbook
+    print("   Cargando workbook...")
+    try:
+        wb = load_workbook(excel_path, read_only=True, data_only=True)
+    except Exception as e:
+        print(f"ERROR cargando Excel: {e}")
+        sys.exit(1)
+
+    print(f"   Hojas disponibles: {wb.sheetnames}")
+
+    # 3. Find sheets
+    def find_sheet(keywords):
+        for name in wb.sheetnames:
+            nl = name.lower()
+            if all(k in nl for k in keywords):
+                return name
+        # Partial match
+        for name in wb.sheetnames:
+            nl = name.lower()
+            if any(k in nl for k in keywords):
+                return name
+        return None
+
+    sh_ap   = find_sheet(["asistencia"]) or find_sheet(["produccion"])
+    sh_tp   = find_sheet(["tiempos"])    or find_sheet(["perdid"])
+    sh_prog = find_sheet(["programa"])   or find_sheet(["envas"])
+
+    print(f"\n   Hoja producción   : {sh_ap}")
+    print(f"   Hoja tiempos      : {sh_tp}")
+    print(f"   Hoja programa     : {sh_prog}")
+
+    # 4. Parse sheets
+    PROD, TD = [], []
+    if sh_ap:
+        print("\n⚙️  Procesando Asistencia + Producción...")
+        PROD, TD = parse_asistencia_prod(wb[sh_ap])
+        print(f"   PROD: {len(PROD)} registros")
+        print(f"   TD:   {len(TD)} registros")
+    else:
+        print("WARN: Hoja 'Asistencia + Produccion' no encontrada")
+
+    PD = []
+    if sh_tp:
+        print("\n⚙️  Procesando Tiempos Perdidos...")
+        PD = parse_tiempos_perdidos(wb[sh_tp])
+        print(f"   PD: {len(PD)} registros")
+    else:
+        print("WARN: Hoja 'Tiempos Perdidos' no encontrada")
+
+    PROG = []
+    if sh_prog:
+        print("\n⚙️  Procesando Programa Envasado...")
+        PROG = parse_programa_envasado(wb[sh_prog])
+        print(f"   PROG: {len(PROG)} registros")
+    else:
+        print("WARN: Hoja 'Programa Envasado' no encontrada")
+
+    # 5. Build indices
+    print("\n⚙️  Construyendo índices...")
+    PIDX, IDX = build_indices(PD, PROD)
+    print(f"   PIDX semanas ZENV: {list(PIDX.get('MS_ZENV', {}).keys())[:5]}...")
+    print(f"   IDX  semanas TP  : {list(IDX.get('MS', {}).keys())[:5]}...")
+
+    # 6. Load template
+    if not os.path.exists(TEMPLATE_FILE):
+        print(f"\nERROR: Template no encontrado en {TEMPLATE_FILE}")
+        print("       Asegúrate de subir template.html a la carpeta templates/")
+        sys.exit(1)
+
+    print(f"\n📄 Template: {TEMPLATE_FILE}")
+    with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
+        template_html = f.read()
+
+    # 7. Embed data
+    print("\n⚙️  Embebiendo datos en template...")
+    output_html = embed_data(template_html, PROD, PIDX, PROG, IDX)
+    
+    # Verify embedding worked
+    if '"fecha"' not in output_html and len(PROD) > 0:
+        print("ERROR: Embedding falló — los datos no aparecen en el HTML")
+        sys.exit(1)
+
+    # 8. Write output
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write(output_html)
+
+    size_kb = os.path.getsize(OUTPUT_FILE) // 1024
+    print(f"\n✅ Generado: {OUTPUT_FILE}")
+    print(f"   Tamaño: {size_kb} KB")
+    print(f"   PROD: {len(PROD)} · PD: {len(PD)} · PROG: {len(PROG)}")
+    print(f"\n🚀 GitHub Pages se actualizará en ~1-2 minutos.")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
