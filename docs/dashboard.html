@@ -1638,8 +1638,8 @@ function buildKpiS3(pd){
   var conCaj=pd.reduce(function(a,r){return a+r.con_cajas;},0);
   var teoBol=pd.reduce(function(a,r){return a+r.teo_bolsas;},0);
   var conBol=pd.reduce(function(a,r){return a+r.con_bolsas;},0);
-  var mermaCaj=Math.max(0,conCaj-teoCaj);
-  var mermaBol=Math.max(0,conBol-teoBol);
+  var mermaCaj=conCaj-teoCaj;
+  var mermaBol=conBol-teoBol;
   var pctMCaj=teoCaj>0?(mermaCaj/teoCaj*100):0;
   var pctMBol=teoBol>0?(mermaBol/teoBol*100):0;
   var kgIn3=pd.reduce(function(a,r){return a+r.kg_ingresados;},0);
@@ -2081,24 +2081,25 @@ function buildS3Lines(pd){
     var bpm=bpmArr.length?bpmArr.reduce(function(a,b){return a+b;})/bpmArr.length:0;
     var bpmSArr=sub.filter(function(r){return r.bpm_std>0;}).map(function(r){return r.bpm_std;});
     var bpmS=bpmSArr.length?bpmSArr.reduce(function(a,b){return a+b;})/bpmSArr.length:0;
-    var lMCaj=sub.reduce(function(a,r){return a+Math.max(0,r.con_cajas-r.teo_cajas);},0);
-    var lMBol=sub.reduce(function(a,r){return a+Math.max(0,r.con_bolsas-r.teo_bolsas);},0);
     var lTeoCaj=sub.reduce(function(a,r){return a+r.teo_cajas;},0);
+    var lConCaj=sub.reduce(function(a,r){return a+r.con_cajas;},0);
     var lTeoBol=sub.reduce(function(a,r){return a+r.teo_bolsas;},0);
+    var lConBol=sub.reduce(function(a,r){return a+r.con_bolsas;},0);
+    var lMCaj=lConCaj-lTeoCaj;
+    var lMBol=lConBol-lTeoBol;
     var lMCajPct=lTeoCaj>0?(lMCaj/lTeoCaj*100):0;
     var lMBolPct=lTeoBol>0?(lMBol/lTeoBol*100):0;
-    var o3s=getOpts('s3','ZENV');
-    var lProgFilt=PROG.filter(function(r){
-      if(!r.fecha) return false;
-      var pp=r.fecha.split('-');
-      var rA=+pp[0], rM=+pp[1], rD=+pp[2];
-      return (!o3s.año||rA==o3s.año)&&
-             (!o3s.mes||rM==o3s.mes)&&
-             (!o3s.dia||rD==o3s.dia)&&
-             (!o3s.turno||String(r.turno)==o3s.turno||r.turno===0);
-    });
-    var lProgCajas=lProgFilt.reduce(function(a,r){return a+r.cajas_prog;},0);
-    var lPctCump=lProgCajas>0?(cajas/lProgCajas*100):0;
+    // Match PROG by fecha+cod+turno against actual production (correct)
+    var subCods=new Set(sub.map(function(r){return r.cod||'';}).filter(Boolean));
+    var lProgCajas=PROG.filter(function(p){
+      return sub.some(function(r){return r.fecha===p.fecha&&(r.cod||'')=== p.cod&&r.turno===p.turno;});
+    }).reduce(function(a,p){return a+p.cajas_prog;},0);
+    // Count only prod rows that have matching PROG
+    var cajasConProg=sub.reduce(function(a,r){
+      var hasP=PROG.some(function(p){return p.fecha===r.fecha&&p.cod===(r.cod||'')&&p.turno===r.turno;});
+      return a+(hasP?r.cajas:0);
+    },0);
+    var lPctCump=lProgCajas>0?(cajasConProg/lProgCajas*100):0;
     var lcc=lPctCump>=100?'var(--grn)':lPctCump>=85?'var(--amb)':'var(--red)';
     var col=LINE_COLS[i%LINE_COLS.length];
     var esps=[...new Set(sub.map(function(r){return r.especie;}).filter(Boolean))].sort();
@@ -2115,7 +2116,7 @@ function buildS3Lines(pd){
           '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn)">'+ton.toFixed(1)+'</div><div class="lksub">toneladas</div></div>'+
           '<div class="lk"><div class="lklbl">Cajas Producidas</div><div class="lkval" style="color:var(--acc2)">'+fmtK(cajas)+'</div><div class="lksub">unidades</div></div>'+
           '<div class="lk"><div class="lklbl">Cajas Prog.</div><div class="lkval" style="color:var(--acc2)">'+fmt(lProgCajas)+'</div><div class="lksub">'+(lProgCajas>0?'según programa':'sin programa')+'</div></div>'+
-          (lProgCajas>0?'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+lcc+'">'+lPctCump.toFixed(1)+'%</div><div class="lksub">'+fmt(cajas)+' reales</div></div>':'')+
+          (lProgCajas>0?'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+lcc+'">'+lPctCump.toFixed(1)+'%</div><div class="lksub">'+fmt(cajasConProg)+' / '+fmt(lProgCajas)+'</div></div>':'')+
           '<div class="lk"><div class="lklbl">B/Min Real</div><div class="lkval" style="color:var(--amb)">'+bpm.toFixed(1)+'</div><div class="lksub">bolsas/min</div></div>'+
           '<div class="lk"><div class="lklbl">B/Min Std</div><div class="lkval" style="color:var(--mut)">'+bpmS.toFixed(1)+'</div></div>'+
           '<div class="lk"><div class="lklbl">Merma Cajas</div><div class="lkval" style="color:var(--red)">'+lMCajPct.toFixed(1)+'%</div><div class="lksub">'+fmt(lMCaj)+' und</div></div>'+
@@ -2235,8 +2236,8 @@ function buildSkuCharts(){
     skuMap[r.sku].ton   +=r.ton_real;
     skuMap[r.sku].cajas +=r.cajas;
     skuMap[r.sku].n++;
-    skuMap[r.sku].mCaj  +=Math.max(0,r.con_cajas-r.teo_cajas);
-    skuMap[r.sku].mBol  +=Math.max(0,r.con_bolsas-r.teo_bolsas);
+    skuMap[r.sku].mCaj  +=(r.con_cajas-r.teo_cajas);
+    skuMap[r.sku].mBol  +=(r.con_bolsas-r.teo_bolsas);
     skuMap[r.sku].teoC  +=r.teo_cajas;
     skuMap[r.sku].teoB  +=r.teo_bolsas;
   });
@@ -2296,35 +2297,35 @@ function buildSkuCharts(){
   var tEl=el('s3SkuTable'); if(!tEl)return;
   tEl.innerHTML=
     '<table><thead><tr>'+
-      '<th>SKU</th>'+
+      '<th style="text-align:left">SKU</th>'+
       '<th>Ton.</th>'+
-      '<th>Cajas</th><th>Cajas Prog.</th><th>Cumpl.%</th>'+
-      '<th style="color:#fca5a5">Merma Cajas</th>'+
-      '<th style="color:#fca5a5">Merma Cajas %</th>'+
-      '<th style="color:#fcd34d">Merma Bolsas</th>'+
-      '<th style="color:#fcd34d">Merma Bolsas %</th>'+
+      '<th>Cajas Prod.</th>'+
       '<th style="color:#60a5fa">Cajas Prog.</th>'+
-      '<th style="color:#22c55e">Cumpl. %</th>'+
+      '<th style="color:#22c55e">Cumpl.%</th>'+
+      '<th style="color:#fca5a5">M.Cajas und</th>'+
+      '<th style="color:#fca5a5">M.Cajas %</th>'+
+      '<th style="color:#fcd34d">M.Bolsas und</th>'+
+      '<th style="color:#fcd34d">M.Bolsas %</th>'+
     '</tr></thead><tbody>'+
     sorted.map(function(e){
       var d=e[1];
-      var pctMC=d.teoC>0?(d.mCaj/d.teoC*100):0;
-      var pctMB=d.teoB>0?(d.mBol/d.teoB*100):0;
-      // Find programadas for this SKU
-      var skuProg=PROG.filter(function(r){return r.sku===e[0] || r.sku.indexOf(e[0])>=0;})
-                      .reduce(function(a,r){return a+r.cajas_prog;},0);
+      var pctMC=d.teoC>0?(d.mCaj/d.teoC*100):null;
+      var pctMB=d.teoB>0?(d.mBol/d.teoB*100):null;
+      var skuProg=d.cajaProg||0;
       var skuCump=skuProg>0?(d.cajas/skuProg*100):null;
       var ccump=skuCump==null?'var(--mut)':skuCump>=100?'var(--grn)':skuCump>=85?'var(--amb)':'var(--red)';
+      var cMC=pctMC===null?'var(--mut)':pctMC<=1?'var(--grn)':pctMC<=2?'var(--amb)':'var(--red)';
+      var cMB=pctMB===null?'var(--mut)':pctMB<=3?'var(--grn)':pctMB<=8?'var(--amb)':'var(--red)';
       return '<tr>'+
-        '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="'+e[0]+'">'+e[0]+'</td>'+
-        '<td style="font-family:var(--mono);color:var(--grn)">'+d.ton.toFixed(1)+'</td>'+
-        '<td style="font-family:var(--mono)">'+fmt(d.cajas)+'</td>'+
-        '<td style="font-family:var(--mono);color:#fca5a5">'+fmt(d.mCaj)+'</td>'+
-        '<td style="font-family:var(--mono);color:#fca5a5">'+pctMC.toFixed(1)+'%</td>'+
-        '<td style="font-family:var(--mono);color:#fcd34d">'+fmt(d.mBol)+'</td>'+
-        '<td style="font-family:var(--mono);color:#fcd34d">'+pctMB.toFixed(1)+'%</td>'+
-        '<td style="font-family:var(--mono);color:#60a5fa">'+(skuProg>0?fmt(skuProg):'—')+'</td>'+
-        '<td style="font-family:var(--mono);color:'+ccump+'">'+(skuCump!=null?skuCump.toFixed(1)+'%':'—')+'</td>'+
+        '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;text-align:left" title="'+e[0]+'">'+e[0]+'</td>'+
+        '<td style="font-family:var(--mono);color:var(--grn);text-align:right">'+d.ton.toFixed(1)+'</td>'+
+        '<td style="font-family:var(--mono);text-align:right">'+fmt(d.cajas)+'</td>'+
+        '<td style="font-family:var(--mono);color:#60a5fa;text-align:right">'+(skuProg>0?fmt(skuProg):'—')+'</td>'+
+        '<td style="font-family:var(--mono);font-weight:700;color:'+ccump+';text-align:right">'+(skuCump!=null?skuCump.toFixed(1)+'%':'—')+'</td>'+
+        '<td style="font-family:var(--mono);color:'+cMC+';text-align:right">'+(pctMC!==null?fmt(Math.round(d.mCaj)):'—')+'</td>'+
+        '<td style="font-family:var(--mono);font-weight:700;color:'+cMC+';text-align:right">'+(pctMC!==null?pctMC.toFixed(2)+'%':'—')+'</td>'+
+        '<td style="font-family:var(--mono);color:'+cMB+';text-align:right">'+(pctMB!==null?fmt(Math.round(d.mBol)):'—')+'</td>'+
+        '<td style="font-family:var(--mono);font-weight:700;color:'+cMB+';text-align:right">'+(pctMB!==null?pctMB.toFixed(2)+'%':'—')+'</td>'+
       '</tr>';
     }).join('')+
     '</tbody></table>';
@@ -2849,34 +2850,36 @@ function buildS3EspCols(l,sub){
           '<span style="font-size:12px;font-weight:700;color:var(--txt)">'+(ESP_ICONS[esp]||'🌿')+' '+esp+'</span>'+
         '</div>'+
         (function(){
-          var eMCaj=esub.reduce(function(a,r){return a+Math.max(0,r.con_cajas-r.teo_cajas);},0);
-          var eMBol=esub.reduce(function(a,r){return a+Math.max(0,r.con_bolsas-r.teo_bolsas);},0);
+          // Aggregate merma (correct method)
           var eTeoCaj=esub.reduce(function(a,r){return a+r.teo_cajas;},0);
+          var eConCaj=esub.reduce(function(a,r){return a+r.con_cajas;},0);
           var eTeoBol=esub.reduce(function(a,r){return a+r.teo_bolsas;},0);
-          var eMCajPct=eTeoCaj>0?(eMCaj/eTeoCaj*100):0;
-          var eMBolPct=eTeoBol>0?(eMBol/eTeoBol*100):0;
+          var eConBol=esub.reduce(function(a,r){return a+r.con_bolsas;},0);
+          var eMCaj=eConCaj-eTeoCaj;
+          var eMBol=eConBol-eTeoBol;
+          var eMCajPct=eTeoCaj>0?(eMCaj/eTeoCaj*100):null;
+          var eMBolPct=eTeoBol>0?(eMBol/eTeoBol*100):null;
           var bpmSArr=esub.filter(function(r){return r.bpm_std>0;}).map(function(r){return r.bpm_std;});
           var bpmS=bpmSArr.length?bpmSArr.reduce(function(a,b){return a+b;})/bpmSArr.length:0;
-          // Filter PROG matching period + SKU
-          var o3e=getOpts('s3','ZENV');
-          var eProg=PROG.filter(function(r){
-            if(!r.sku||!r.fecha) return false;
-            if(!esub.some(function(s){return s.sku===r.sku;})) return false;
-            var pp=r.fecha.split('-'); var rA=+pp[0],rM=+pp[1],rD=+pp[2];
-            return (!o3e.año||rA==o3e.año)&&(!o3e.mes||rM==o3e.mes)&&(!o3e.dia||rD==o3e.dia);
-          });
-          var eCajProg=eProg.reduce(function(a,r){return a+r.cajas_prog;},0);
-          var ePctCump=eCajProg>0?(cajas/eCajProg*100):0;
-          var ecc=ePctCump>=100?'var(--grn)':ePctCump>=85?'var(--amb)':'var(--red)';
+          // Cumplimiento by fecha+cod+turno matching (correct)
+          var eCajProg=PROG.filter(function(p){
+            return esub.some(function(r){return r.fecha===p.fecha&&(r.cod||'')===p.cod&&r.turno===p.turno;});
+          }).reduce(function(a,p){return a+p.cajas_prog;},0);
+          var eCajasConProg=esub.reduce(function(a,r){
+            var hasP=PROG.some(function(p){return p.fecha===r.fecha&&p.cod===(r.cod||'')&&p.turno===r.turno;});
+            return a+(hasP?r.cajas:0);
+          },0);
+          var ePctCump=eCajProg>0?(eCajasConProg/eCajProg*100):null;
+          var ecc=ePctCump===null?'var(--mut)':ePctCump>=100?'var(--grn)':ePctCump>=85?'var(--amb)':'var(--red)';
           return '<div style="padding:0 10px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">'+
             '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn);font-size:13px">'+ton.toFixed(1)+'</div></div>'+
             '<div class="lk"><div class="lklbl">Cajas Producidas</div><div class="lkval" style="color:var(--acc2);font-size:13px">'+fmt(cajas)+'</div></div>'+
-            (eCajProg>0?'<div class="lk"><div class="lklbl">Cajas Prog.</div><div class="lkval" style="color:var(--acc2);font-size:13px">'+fmt(eCajProg)+'</div></div>':'<div class="lk"></div>')+
-            (eCajProg>0?'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+ecc+';font-size:13px">'+ePctCump.toFixed(1)+'%</div><div class="lksub">'+fmt(cajas)+' reales</div></div>':'')+
+            '<div class="lk"><div class="lklbl">Cajas Prog.</div><div class="lkval" style="color:'+(eCajProg>0?'var(--acc2)':'var(--mut)')+';font-size:13px">'+(eCajProg>0?fmt(eCajProg):'—')+'</div></div>'+
+            (ePctCump!==null?'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+ecc+';font-size:13px">'+ePctCump.toFixed(1)+'%</div><div class="lksub">'+fmt(eCajasConProg)+' / '+fmt(eCajProg)+'</div></div>':'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:var(--mut);font-size:13px">—</div><div class="lksub">sin programa</div></div>')+
             '<div class="lk"><div class="lklbl">B/Min Real</div><div class="lkval" style="color:var(--amb);font-size:13px">'+bpm.toFixed(1)+'</div></div>'+
             '<div class="lk"><div class="lklbl">B/Min Std</div><div class="lkval" style="color:var(--mut);font-size:13px">'+bpmS.toFixed(1)+'</div></div>'+
-            '<div class="lk"><div class="lklbl">Merma Cajas</div><div class="lkval" style="color:var(--red);font-size:13px">'+eMCajPct.toFixed(1)+'%</div><div class="lksub">'+fmt(eMCaj)+' und</div></div>'+
-            '<div class="lk"><div class="lklbl">Merma Bolsas</div><div class="lkval" style="color:var(--amb);font-size:13px">'+eMBolPct.toFixed(1)+'%</div><div class="lksub">'+fmt(eMBol)+' und</div></div>'+
+            '<div class="lk"><div class="lklbl">Merma Cajas</div><div class="lkval" style="color:'+(eMCajPct===null?'var(--mut)':eMCajPct<=1?'var(--grn)':eMCajPct<=2?'var(--amb)':'var(--red)')+';font-size:13px">'+(eMCajPct!==null?eMCajPct.toFixed(2)+'%':'—')+'</div><div class="lksub">'+(eMCajPct!==null?fmt(Math.round(eMCaj))+' und':'')+'</div></div>'+
+            '<div class="lk"><div class="lklbl">Merma Bolsas</div><div class="lkval" style="color:'+(eMBolPct===null?'var(--mut)':eMBolPct<=3?'var(--grn)':eMBolPct<=8?'var(--amb)':'var(--red)')+';font-size:13px">'+(eMBolPct!==null?eMBolPct.toFixed(2)+'%':'—')+'</div><div class="lksub">'+(eMBolPct!==null?fmt(Math.round(eMBol))+' und':'')+'</div></div>'+
           '</div>';
         })()+
         // SKU filter for this especie
@@ -4133,12 +4136,13 @@ function renderReArea(area, lines, filterR){
       var cumpl=cajasProg>0?(cajasConProgZ/cajasProg*100):null;
       var cumplColor=cumpl===null?CC.txt:cumpl>=100?CC.grn:cumpl>=85?CC.amb:CC.red;
       // Merma cajas y bolsas promedio
-      var merCajArr=prod.filter(function(r){return r.teo_cajas>0;})
-        .map(function(r){return(r.con_cajas-r.teo_cajas)/r.teo_cajas*100;});
-      var merBolArr=prod.filter(function(r){return r.teo_bolsas>0;})
-        .map(function(r){return(r.con_bolsas-r.teo_bolsas)/r.teo_bolsas*100;});
-      var merCajPct=merCajArr.length?merCajArr.reduce(function(a,b){return a+b;},0)/merCajArr.length:null;
-      var merBolPct=merBolArr.length?merBolArr.reduce(function(a,b){return a+b;},0)/merBolArr.length:null;
+      // Aggregate method: SUM(con-teo)/SUM(teo) — correct, not average of ratios
+      var sumTeoCaj=prod.reduce(function(a,r){return a+r.teo_cajas;},0);
+      var sumConCaj=prod.reduce(function(a,r){return a+r.con_cajas;},0);
+      var sumTeoBol=prod.reduce(function(a,r){return a+r.teo_bolsas;},0);
+      var sumConBol=prod.reduce(function(a,r){return a+r.con_bolsas;},0);
+      var merCajPct=sumTeoCaj>0?((sumConCaj-sumTeoCaj)/sumTeoCaj*100):null;
+      var merBolPct=sumTeoBol>0?((sumConBol-sumTeoBol)/sumTeoBol*100):null;
       var merCajColor=merCajPct===null?CC.txt:merCajPct<=1?CC.grn:merCajPct<=2?CC.amb:CC.red;
       var merBolColor=merBolPct===null?CC.txt:merBolPct<=1?CC.grn:merBolPct<=2?CC.amb:CC.red;
       kpiH+=
@@ -4214,12 +4218,12 @@ function renderReArea(area, lines, filterR){
     var skuMap={};
     prod.forEach(function(r){
       if(!r.sku||!r.cajas)return;
-      if(!skuMap[r.sku])skuMap[r.sku]={cajas:0,ton:0,cajasProg:0,bpmSum:0,bpmN:0,merCaj:0,merCajN:0,merBol:0,merBolN:0};
+      if(!skuMap[r.sku])skuMap[r.sku]={cajas:0,ton:0,cajasProg:0,bpmSum:0,bpmN:0,teoC:0,conC:0,teoB:0,conB:0};
       var s=skuMap[r.sku];
       s.cajas+=r.cajas; s.ton+=r.ton_real;
       if(r.bpm_total>0){s.bpmSum+=r.bpm_total;s.bpmN++;}
-      if(r.teo_cajas>0){s.merCaj+=(r.con_cajas-r.teo_cajas)/r.teo_cajas*100;s.merCajN++;}
-      if(r.teo_bolsas>0){s.merBol+=(r.con_bolsas-r.teo_bolsas)/r.teo_bolsas*100;s.merBolN++;}
+      s.teoC+=(r.teo_cajas||0); s.conC+=(r.con_cajas||0);
+      s.teoB+=(r.teo_bolsas||0); s.conB+=(r.con_bolsas||0);
     });
     // Match cajas programadas by cod (material code) + fecha
     var prodFechas=new Set(prod.map(function(r){return r.fecha;}));
@@ -4262,12 +4266,12 @@ function renderReArea(area, lines, filterR){
       topSku.forEach(function(entry,i){
         var sku=entry[0]; var s=entry[1];
         var bpm=s.bpmN>0?(s.bpmSum/s.bpmN).toFixed(1):'—';
-        var merCajPct=s.merCajN>0?(s.merCaj/s.merCajN):0;
-        var merBolPct=s.merBolN>0?(s.merBol/s.merBolN):0;
-        var merCaj=s.merCajN>0?merCajPct.toFixed(1)+'%':'—';
-        var merBol=s.merBolN>0?merBolPct.toFixed(1)+'%':'—';
-        var merCajColor=s.merCajN>0?(merCajPct<=1?CC.grn:merCajPct<=2?CC.amb:CC.red):CC.txt;
-        var merBolColor=s.merBolN>0?(merBolPct<=1?CC.grn:merBolPct<=2?CC.amb:CC.red):CC.txt;
+        var merCajPct=s.teoC>0?((s.conC-s.teoC)/s.teoC*100):null;
+        var merBolPct=s.teoB>0?((s.conB-s.teoB)/s.teoB*100):null;
+        var merCaj=merCajPct!==null?merCajPct.toFixed(1)+'%':'—';
+        var merBol=merBolPct!==null?merBolPct.toFixed(1)+'%':'—';
+        var merCajColor=merCajPct===null?CC.txt:merCajPct<=1?CC.grn:merCajPct<=2?CC.amb:CC.red;
+        var merBolColor=merBolPct===null?CC.txt:merBolPct<=1?CC.grn:merBolPct<=2?CC.amb:CC.red;
         var cajasMatchProg=prodConProgByCod[sku]||0;
         var cumpl=s.cajasProg>0?(cajasMatchProg>0?cajasMatchProg:s.cajas)/s.cajasProg*100:null;
         var cumplStr=cumpl!==null?cumpl.toFixed(1)+'%':'—';
