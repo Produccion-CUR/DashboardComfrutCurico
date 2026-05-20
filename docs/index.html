@@ -4416,10 +4416,12 @@ function updateResumen(){
   // Try current week first; if empty, fall back to latest semana in data
   var prodFiltered=PROD.filter(filterR);
   if(!prodFiltered.length && !filtA && !filtS){
-    // No data for current week → use latest semana available
-    var allSems=[...new Set(PROD.map(function(r){return r.semana;}))].sort(function(a,b){return b-a;});
-    var latestSem=allSems[0]||0;
-    if(latestSem) prodFiltered=PROD.filter(function(r){return r.semana===latestSem;});
+    // No data for current week → use latest semana BY DATE (not by number)
+    var sortedByDate=[...PROD].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+    var latestFecha=sortedByDate.length?sortedByDate[0].fecha:'';
+    var latestSem=latestFecha?PROD.find(function(r){return r.fecha===latestFecha;}).semana:0;
+    var latestAno=latestFecha?PROD.find(function(r){return r.fecha===latestFecha;}).año:0;
+    if(latestSem) prodFiltered=PROD.filter(function(r){return r.semana===latestSem&&r.año===latestAno;});
   }
   var semNum=prodFiltered.length?prodFiltered[0].semana:'?';
   var semLabel=document.getElementById('reSemLabel');
@@ -5211,12 +5213,13 @@ function goCurrentSem(pfx){
   var area = (pfx==='s2'||pfx==='tp2') ? 'ZCIQ' : 'ZENV';
   var areaFilter = (pfx==='tp2'||pfx==='tp3') ? function(r){return r.area===area;} : function(r){return r.area===area;};
   // Use all PROD to find max semana in this area's 2026 data
-  var recentProd = PROD.filter(function(r){return r.area===area && r.año>=2026;});
-  if(!recentProd.length) recentProd = PROD.filter(function(r){return r.area===area;});
-  var maxSem = recentProd.reduce(function(mx,r){return r.semana>mx?r.semana:mx;}, 0);
+  var areaProd = PROD.filter(function(r){return r.area===area;});
+  if(!areaProd.length) return;
+  // Find latest by fecha (not by semana number, which wraps year-to-year)
+  var latestRec = areaProd.reduce(function(mx,r){return r.fecha>mx.fecha?r:mx;}, areaProd[0]);
+  var maxSem = latestRec.semana;
+  var maxAño = latestRec.año;
   if(!maxSem) return;
-  // Set año to most recent year with data
-  var maxAño = recentProd.reduce(function(mx,r){return r.año>mx?r.año:mx;}, 0);
   // Set filters
   var añoEl = document.getElementById(pfx+'A');
   var semEl = document.getElementById(pfx+'S');
