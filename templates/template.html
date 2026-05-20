@@ -538,7 +538,6 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
     </div>
     <div class="nav-r">
       <span style="font-size:10px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;" id="srcLbl">T 25-26</span>
-      <button class="upbtn" id="btnPdf" onclick="exportPDF()" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#f87171;">📄 PDF</button>
       <label class="upbtn" for="fi">📂 Excel</label>
       <input type="file" id="fi" accept=".xlsx,.xls">
     </div>
@@ -1023,7 +1022,10 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
       <div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.1em;">Semana Actual</div>
       <div id="reSemLabel" style="font-size:18px;font-weight:800;color:var(--acc);">—</div>
     </div>
-    <div style="text-align:right;font-size:10px;color:var(--mut);" id="reLastUpdate">—</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+      <div style="text-align:right;font-size:10px;color:var(--mut);" id="reLastUpdate">—</div>
+      <button id="btnPdf" onclick="exportPDF()" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#f87171;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.03em;">📄 Exportar PDF</button>
+    </div>
   </div>
 
   <!-- ════ SECCIÓN 1: SELECCIÓN (ZCIQ) ════ -->
@@ -3482,7 +3484,7 @@ function buildLineGroups(cid,pd,td,lines,pfx){
     const ids={p:pfx+l+'p',c1:pfx+l+'c1',c2:pfx+l+'c2',t:pfx+l+'t',d:pfx+l+'d',tu:pfx+l+'tu'};
     if(!window._tdCache) window._tdCache={};
     window._tdCache[grpId]=td;
-    h+='<div class="linegrp" id="'+grpId+'" data-line="'+l+'" data-pfx="'+pfx+'">      <div class="lghead" onclick="toggleLGTP(this)">        <div class="lgh-dot" style="background:'+col+'"></div>        <span class="lgh-title">'+(LMAP[l]||l)+'</span>        <span class="lgh-stats">'+sub.length+' ev. · Plan: '+fmt(plan)+' | No Plan: '+fmt(nopl)+' min · Disp: '+disp+'%</span>        <span class="lgh-arrow">▼</span>      </div>      <div class="lgbody">        <div class="lkpis">          <div class="lk"><div class="lklbl">T. Teórico</div><div class="lkval" style="color:var(--acc2)">'+fmt(teo)+'</div><div class="lksub">min</div></div>          <div class="lk"><div class="lklbl">T. Plan. (Prog.)</div><div class="lkval" style="color:var(--grn)">'+fmt(plan)+'</div><div class="lksub">min programados</div></div>          <div class="lk"><div class="lklbl">T. No Plan. (Fallas)</div><div class="lkval" style="color:var(--red)">'+fmt(nopl)+'</div><div class="lksub">min fallas sorpresa</div></div>          <div class="lk"><div class="lklbl">T. Real Disponible</div><div class="lkval" style="color:var(--grn)">'+fmt(real)+'</div><div class="lksub">'+(efec>0?'Tiempo Efec.':'Teórico−Perdido')+'</div></div>          <div class="lk"><div class="lklbl">Disponibilidad</div>            <div class="lkval" style="color:'+(parseFloat(disp)>=90?'var(--grn)':parseFloat(disp)>=75?'var(--amb)':'var(--red)')+'">'+disp+'%</div>            <div class="lksub">Meta ≥ 85%</div></div>          <div class="lk"><div class="lklbl">Eventos</div><div class="lkval" style="color:var(--amb)">'+sub.length+'</div><div class="lksub">registros</div></div>        </div>        <div class="g2">                      <div class="gc">            <div class="gt">📊 Pareto de Causas</div>            <div class="gs">Hover para ver minutos y % del total</div>            <div style="display:flex;gap:5px;margin-bottom:4px;"><button class="lbtn" data-pid="'+ids.p+'" data-tipo="all" onclick="setLinePareto(this.dataset.pid,this.dataset.tipo)" style="font-size:9px;padding:2px 7px;background:rgba(59,130,246,.3);border-color:rgba(59,130,246,.5);color:#93c5fd;">Todos</button><button class="lbtn" data-pid="'+ids.p+'" data-tipo="plan" onclick="setLinePareto(this.dataset.pid,this.dataset.tipo)" style="font-size:9px;padding:2px 7px;">Plan.</button><button class="lbtn" data-pid="'+ids.p+'" data-tipo="noplan" onclick="setLinePareto(this.dataset.pid,this.dataset.tipo)" style="font-size:9px;padding:2px 7px;">No Plan.</button></div>            <div class="cw h200"><canvas id="'+ids.p+'"></canvas></div>            <div class="ibox" id="'+ids.p+'ins" style="margin-top:6px;"></div>          </div>          <div class="gc">            <div class="gt">🥧 Distribución por Categoría</div>            <div class="gs">% visible en sectores · leyenda en blanco</div>            <div class="cw h200"><canvas id="'+ids.d+'"></canvas></div>          </div>        </div>        <div class="g2" style="margin-top:10px;">          <div class="gc">            <div class="gt">📈 Tendencia Diaria (min)</div>            <div class="gs">Verde = planificado · Rojo = no planificado</div>            <div class="cw h200"><canvas id="'+ids.t+'"></canvas></div>          </div>          <div class="gc">            <div class="gt">🔄 Comparación por Turno</div>            <div class="gs">Plan. vs No Plan. por turno de producción</div>            <div class="cw h200"><canvas id="'+ids.tu+'"></canvas></div>          </div>        </div>        <div class="g2" style="margin-top:10px;">          <div class="gc">            <div class="gt">🌊 Cascada por Categoría (min)</div>            <div class="gs">Del teórico al tiempo real disponible</div>            <div class="cw h200"><canvas id="'+ids.c1+'"></canvas></div>          </div>          <div class="gc">            <div class="gt">🌊 Cascada por Causa (min)</div>            <div class="gs">Top causas que reducen el tiempo disponible</div>            <div class="cw h200"><canvas id="'+ids.c2+'"></canvas></div>          </div>        </div>      </div>    </div>';
+    h+='<div class="linegrp" id="'+grpId+'" data-line="'+l+'" data-pfx="'+pfx+'">      <div class="lghead" onclick="toggleLGTP(this)">        <div class="lgh-dot" style="background:'+col+'"></div>        <span class="lgh-title">'+(LMAP[l]||l)+'</span>        <span class="lgh-stats">'+sub.length+' ev. · Plan: '+fmt(plan)+' | No Plan: '+fmt(nopl)+' min · Disp: '+disp+'%</span>        <span class="lgh-arrow">▼</span>      </div>      <div class="lgbody">        <div class="lkpis">          <div class="lk"><div class="lklbl">T. Teórico</div><div class="lkval" style="color:var(--acc2)">'+fmt(teo)+'</div><div class="lksub">min</div></div>          <div class="lk"><div class="lklbl">T. Plan. (Prog.)</div><div class="lkval" style="color:var(--grn)">'+fmt(plan)+'</div><div class="lksub">min programados</div></div>          <div class="lk"><div class="lklbl">T. No Plan. (Fallas)</div><div class="lkval" style="color:var(--red)">'+fmt(nopl)+'</div><div class="lksub">min fallas sorpresa</div></div>          <div class="lk"><div class="lklbl">T. Real Disponible</div><div class="lkval" style="color:var(--grn)">'+fmt(real)+'</div><div class="lksub">'+(efec>0?'Tiempo Efec.':'Teórico−Perdido')+'</div></div>          <div class="lk"><div class="lklbl">Disponibilidad</div>            <div class="lkval" style="color:'+(parseFloat(disp)>=90?'var(--grn)':parseFloat(disp)>=75?'var(--amb)':'var(--red)')+'">'+disp+'%</div>            <div class="lksub">Meta ≥ 85%</div></div>          <div class="lk"><div class="lklbl">Eventos</div><div class="lkval" style="color:var(--amb)">'+sub.length+'</div><div class="lksub">registros</div></div>        </div>        <div class="g2">                      <div class="gc">            <div class="gt">📊 Pareto de Causas</div>            <div class="gs">Hover para ver minutos y % del total</div>            <div style="display:flex;gap:5px;margin-bottom:4px;"><button class="lbtn" data-pid="'+ids.p+'" data-tipo="all" onclick="setLinePareto(this.dataset.pid,this.dataset.tipo)" style="font-size:9px;padding:2px 7px;background:rgba(59,130,246,.3);border-color:rgba(59,130,246,.5);color:#93c5fd;">Todos</button><button class="lbtn" data-pid="'+ids.p+'" data-tipo="plan" onclick="setLinePareto(this.dataset.pid,this.dataset.tipo)" style="font-size:9px;padding:2px 7px;">Plan.</button><button class="lbtn" data-pid="'+ids.p+'" data-tipo="noplan" onclick="setLinePareto(this.dataset.pid,this.dataset.tipo)" style="font-size:9px;padding:2px 7px;">No Plan.</button></div>            <div class="cw h200"><canvas id="'+ids.p+'"></canvas></div>            <div class="ibox" id="'+ids.p+'ins" style="margin-top:6px;"></div>          </div>          <div class="gc">            <div class="gt">🥧 Distribución por Categoría</div>            <div class="gs">% visible en sectores · leyenda en blanco</div>            <div class="cw h200"><canvas id="'+ids.d+'"></canvas></div>          </div>        </div>        <div class="g2" style="margin-top:10px;">          <div class="gc">            <div class="gt">📈 Tendencia Diaria (min)</div>            <div class="gs">Verde = planificado · Rojo = no planificado</div>            <div class="cw h200"><canvas id="'+ids.t+'"></canvas></div>          </div>          <div class="gc">            <div class="gt">🔄 Comparación por Turno</div>            <div class="gs">Plan. vs No Plan. por turno de producción</div>            <div class="cw h200"><canvas id="'+ids.tu+'"></canvas></div>          </div>        </div>        <div class="g2" style="margin-top:10px;">          <div class="gc" style="grid-column:1/-1">            <div class="gt">🌊 Cascada por Categoría y Causa (min)</div>            <div style="display:flex;gap:5px;margin-bottom:4px;">              <button class="lbtn" data-cid="'+ids.c1+'|'+ids.c2+'" data-ctipo="all" onclick="setCascFilter(this)" style="font-size:9px;padding:2px 8px;background:rgba(59,130,246,.3);border-color:rgba(59,130,246,.5);color:#93c5fd;">Todos</button>              <button class="lbtn" data-cid="'+ids.c1+'|'+ids.c2+'" data-ctipo="plan" onclick="setCascFilter(this)" style="font-size:9px;padding:2px 8px;">Planificado</button>              <button class="lbtn" data-cid="'+ids.c1+'|'+ids.c2+'" data-ctipo="noplan" onclick="setCascFilter(this)" style="font-size:9px;padding:2px 8px;">No Plan.</button>            </div>            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">              <div class="cw h200"><canvas id="'+ids.c1+'"></canvas></div>              <div class="cw h200"><canvas id="'+ids.c2+'"></canvas></div>            </div>          </div>        </div>      </div>    </div>';
   });
   el.innerHTML=h;
 }
@@ -3494,6 +3496,8 @@ function renderLineCharts(l,sub,teo,ids,pfx,tdFiltered){
     : TD.filter(r=>r.linea===l);
   window._linePD=window._linePD||{};
   window._linePD[ids.p]=sub;
+  window._linePDraw=window._linePDraw||{};
+  window._linePDraw[ids.c1+'|'+ids.c2]=sub; // store for cascade filter
   const{sorted,total}=mkPareto(ids.p,sub,7);
   // Pareto insight
   const insEl=document.getElementById(ids.p+'ins');
@@ -3514,6 +3518,8 @@ function renderLineCharts(l,sub,teo,ids,pfx,tdFiltered){
   // Cascadas - use filtered TD for this line (respects año/mes/sem filters)
   const tdCasc=tdSub.length?tdSub:(teo>0?[{linea:l,minutos:teo,efec_min:0}]:[]);
   buildCasc(ids.c1,ids.c2,sub,tdCasc);
+  window._lineTD=window._lineTD||{};
+  window._lineTD[ids.c1+'|'+ids.c2]={pd:sub,td:tdCasc};
 }
 
 function toggleLGTP(hd){
@@ -3986,107 +3992,380 @@ function popAreaTP(pfx,area){
   fillEl(pfx+'S',allSems.map(function(s){return{v:s,l:'Sem '+s};}),'Todas');
 }
 
-/* ── PDF Export ─────────────────────────────────────────────────────────── */
+/* ── PDF Export — Resumen Ejecutivo ──────────────────────────────────────── */
 function exportPDF(){
   var btn=el('btnPdf');
-  if(btn){btn.textContent='⏳...';btn.disabled=true;}
+  if(btn){btn.textContent='⏳ Generando...';btn.disabled=true;}
   if(typeof window.jspdf==='undefined'){
     var s=document.createElement('script');
     s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
     s.onload=function(){runPDF(btn);};
-    s.onerror=function(){if(btn){btn.textContent='📄 PDF';btn.disabled=false;}};
+    s.onerror=function(){if(btn){btn.textContent='📄 Exportar PDF';btn.disabled=false;}};
     document.head.appendChild(s); return;
   }
   runPDF(btn);
 }
+
 function runPDF(btn){
   try{
-    var activeScreen=['s2','s3','tp2','tp3'].find(function(id){
-      var e=el(id); return e&&e.classList.contains('on');
-    })||'s2';
-    var names={s2:'Selección_ZCIQ',s3:'Envasado_ZENV',tp2:'TP_Selección',tp3:'TP_Envasado'};
-    var today=new Date();
-    var wkMon=new Date(today); wkMon.setDate(today.getDate()-today.getDay()-6);
-    var wkSun=new Date(wkMon); wkSun.setDate(wkMon.getDate()+6);
-    var prevMon=new Date(today.getFullYear(),today.getMonth()-1,1);
-    var pY=prevMon.getFullYear(), pM=prevMon.getMonth()+1;
-    function inWk(r){if(!r.fecha)return false;var p=r.fecha.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]);return d>=wkMon&&d<=wkSun;}
-    function inMo(r){return r.año===pY&&r.mes===pM;}
     var jsPDFLib=window.jspdf;
     var doc=new jsPDFLib.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    var pw=210,ph=297,mg=14,cw=182,y=mg;
+    var pw=210, ph=297, mg=12, cw=186, y=mg;
+
+    // ── Color palette ──────────────────────────────────────────────────────
+    var DK=[8,13,28], AC=[96,165,250], GR=[52,211,153], AM=[245,158,11];
+    var RD=[248,113,113], WH=[224,231,255], GY=[100,116,139], MU=[148,163,184];
+    var BG=[15,23,50], BG2=[20,30,60];
+
+    // ── Helpers ────────────────────────────────────────────────────────────
     function sf(r){doc.setFillColor(r[0],r[1],r[2]);}
     function st(r){doc.setTextColor(r[0],r[1],r[2]);}
-    var DK=[10,15,30],AC=[96,165,250],GR=[52,211,153],WH=[238,242,255],GY=[100,116,139];
-    function hdr(){sf(DK);doc.rect(0,0,pw,20,'F');sf(AC);doc.roundedRect(mg,4,12,12,2,2,'F');
-      st([255,255,255]);doc.setFontSize(8);doc.setFont('helvetica','bold');doc.text('CF',mg+6,11.5,{align:'center'});
-      st(WH);doc.setFontSize(12);doc.text('Informe '+names[activeScreen],mg+16,10);
-      st(GY);doc.setFontSize(7);doc.setFont('helvetica','normal');
-      doc.text('Planta Curicó · COMFRUT · T 2025-26',mg+16,15);
-      doc.text(new Date().toLocaleDateString('es-CL'),pw-mg,15,{align:'right'});y=26;}
-    function secT(txt,col){if(y>ph-30){doc.addPage();hdr();}
-      sf(col||AC);doc.roundedRect(mg,y,cw,7,1,1,'F');
-      st([255,255,255]);doc.setFontSize(8);doc.setFont('helvetica','bold');
-      doc.text(txt.toUpperCase(),mg+3,y+4.8);y+=10;}
-    function kRow(kpis){var cols=Math.min(kpis.length,4),kw=cw/cols-2,kh=18;
+    function sd(r){doc.setDrawColor(r[0],r[1],r[2]);}
+    function fmtN(n){if(n===null||n===undefined||isNaN(n))return '—';
+      return n>=1000?Math.round(n).toLocaleString('es-CL'):n%1===0?String(n):(+n).toFixed(1);}
+
+    // ── Get filter state from Resumen dropdowns ────────────────────────────
+    var filtA = (el('reA')||{value:''}).value;
+    var filtS = (el('reS')||{value:''}).value;
+    var semLabel = (el('reSemLabel')||{textContent:'—'}).textContent;
+
+    // ── Get filtered data (same logic as updateResumen) ────────────────────
+    var today=new Date();
+    var dayOfWeek=today.getDay();
+    var mondayOffset=dayOfWeek===0?-6:1-dayOfWeek;
+    var weekMon=new Date(today); weekMon.setDate(today.getDate()+mondayOffset);
+    var weekSun=new Date(weekMon); weekSun.setDate(weekMon.getDate()+6);
+    function inWeek(r){
+      if(!r.fecha)return false;
+      var p=r.fecha.split('-');
+      var d=new Date(+p[0],+p[1]-1,+p[2]);
+      return d>=weekMon&&d<=weekSun;
+    }
+    function filterR(r){
+      if(filtA&&String(r.año)!==filtA)return false;
+      if(filtS&&String(r.semana)!==filtS)return false;
+      if(!filtA&&!filtS)return inWeek(r);
+      return true;
+    }
+    var prodAll = PROD.filter(filterR);
+    var pdAll   = PD.filter(filterR);
+    var tdAll   = TD.filter(filterR);
+    if(!prodAll.length){
+      // fallback to latest semana
+      var allSems=[...new Set(PROD.map(function(r){return r.semana;}))].sort(function(a,b){return b-a;});
+      var ls=allSems[0]||0;
+      if(ls){
+        prodAll=PROD.filter(function(r){return r.semana===ls;});
+        pdAll  =PD.filter(function(r){return r.semana===ls;});
+        tdAll  =TD.filter(function(r){return r.semana===ls;});
+      }
+    }
+    var prodZCIQ = prodAll.filter(function(r){return r.area==='ZCIQ';});
+    var prodZENV = prodAll.filter(function(r){return r.area==='ZENV';});
+    var pdZCIQ   = pdAll.filter(function(r){return ZCIQ_L.includes(r.linea);});
+    var pdZENV   = pdAll.filter(function(r){return ZENV_L.includes(r.linea);});
+    var tdZCIQ   = tdAll.filter(function(r){return ZCIQ_L.includes(r.linea);});
+    var tdZENV   = tdAll.filter(function(r){return ZENV_L.includes(r.linea);});
+
+    // ── Page header ────────────────────────────────────────────────────────
+    function hdr(title){
+      sf(DK); doc.rect(0,0,pw,18,'F');
+      sf(AC); doc.roundedRect(mg,3,10,10,1.5,1.5,'F');
+      st([255,255,255]); doc.setFontSize(7); doc.setFont('helvetica','bold');
+      doc.text('CF',mg+5,9.5,{align:'center'});
+      st(WH); doc.setFontSize(10); doc.text(title||'Resumen Ejecutivo',mg+13,8);
+      st(MU); doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+      doc.text('Planta Curicó · COMFRUT · T 2025-26',mg+13,13);
+      doc.text(new Date().toLocaleDateString('es-CL'),pw-mg,13,{align:'right'});
+      y=24;
+    }
+
+    // ── Section title ──────────────────────────────────────────────────────
+    function secT(txt, colArr){
+      if(y>ph-35){doc.addPage();hdr();}
+      var col=colArr||AC;
+      sf(col); doc.roundedRect(mg,y,cw,6.5,1,1,'F');
+      st([255,255,255]); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+      doc.text(txt.toUpperCase(),mg+3,y+4.5);
+      y+=9;
+    }
+
+    // ── KPI cards row ──────────────────────────────────────────────────────
+    function kRow(kpis){
+      var cols=Math.min(kpis.length,4), kw=cw/cols-1.5, kh=17;
       if(y+kh>ph-20){doc.addPage();hdr();}
-      kpis.forEach(function(k,i){var col=i%cols,row=Math.floor(i/cols),kx=mg+col*(kw+2),ky=y+row*(kh+2);
-        doc.setFillColor(20,30,60);doc.roundedRect(kx,ky,kw,kh,1,1,'F');
-        var rgb=k.c||AC;doc.setDrawColor(rgb[0],rgb[1],rgb[2]);doc.setLineWidth(0.8);doc.line(kx,ky,kx+kw,ky);
-        st(GY);doc.setFontSize(6);doc.setFont('helvetica','normal');doc.text((k.l||'').toUpperCase(),kx+3,ky+4.5);
-        doc.setTextColor(rgb[0],rgb[1],rgb[2]);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.text(String(k.v||'—'),kx+3,ky+11);
-        st(GY);doc.setFontSize(5.5);doc.text(String(k.s||''),kx+3,ky+16);});
-      y+=Math.ceil(kpis.length/cols)*(kh+2)+4;}
-    function bKpis(pd,screen){
-      if(screen==='s2'){
-        var kgIn=pd.reduce(function(a,r){return a+r.kg_ingresados;},0);
-        var iqf=pd.reduce(function(a,r){return a+r.iqf_aprobado;},0);
-        var rend=kgIn>0?(iqf/kgIn*100):0;
-        return [{l:'Kg Ingresados',v:fmt(kgIn),s:'materia prima',c:AC},
-          {l:'IQF Aprobado',v:fmt(iqf),s:'kg aprobados',c:GR},
-          {l:'Rendimiento IQF',v:rend.toFixed(1)+'%',s:'meta 85%',c:rend>=85?GR:[248,113,113]}];
-      }
-      if(screen==='s3'){
-        var ton=pd.reduce(function(a,r){return a+r.ton_real;},0);
-        var cajas=pd.reduce(function(a,r){return a+r.cajas;},0);
-        var cajProg=PROG.reduce(function(a,r){return a+r.cajas_prog;},0);
-        return [{l:'Toneladas',v:ton.toFixed(1),s:'reales',c:GR},
-          {l:'Cajas',v:fmt(cajas),s:'producidas',c:AC},
-          {l:'Cumplimiento',v:cajProg>0?(cajas/cajProg*100).toFixed(1)+'%':'—',s:'vs programa',c:GR}];
-      }
-      var tPerd=pd.reduce(function(a,r){return a+r.minutos;},0);
-      var lines=screen==='tp2'?ZCIQ_L:ZENV_L;
-      var teo=TD.filter(function(r){return lines.includes(r.linea);}).reduce(function(a,r){return a+r.minutos;},0);
-      var efec=TD.filter(function(r){return lines.includes(r.linea);}).reduce(function(a,r){return a+(r.efec_min||0);},0);
-      var disp=teo>0?(efec/teo*100):0;
-      return [{l:'T.Perdido',v:fmt(tPerd),s:'min',c:[248,113,113]},
-        {l:'Disponibilidad',v:disp.toFixed(1)+'%',s:'meta 85%',c:disp>=85?GR:[248,113,113]}];
+      kpis.forEach(function(k,i){
+        var col=i%cols, kx=mg+col*(kw+1.5), ky=y;
+        sf(BG2); doc.roundedRect(kx,ky,kw,kh,1,1,'F');
+        var rgb=k.c||AC; sd(rgb); doc.setLineWidth(0.4);
+        doc.line(kx+1,ky,kx+kw-1,ky);
+        st(GY); doc.setFontSize(5.5); doc.setFont('helvetica','normal');
+        doc.text((k.l||'').toUpperCase(),kx+2.5,ky+4);
+        doc.setTextColor(rgb[0],rgb[1],rgb[2]);
+        doc.setFontSize(10); doc.setFont('helvetica','bold');
+        doc.text(String(k.v||'—'),kx+2.5,ky+11);
+        st(GY); doc.setFontSize(5); doc.text(String(k.s||''),kx+2.5,ky+15.5);
+      });
+      y+=kh+3;
     }
-    function renderPd(label,filterFn,col){
-      var isTP=activeScreen==='tp2'||activeScreen==='tp3';
-      var area=activeScreen==='s2'?'ZCIQ':activeScreen==='s3'?'ZENV':activeScreen==='tp2'?'ZCIQ':'ZENV';
-      var pd=isTP?PD.filter(function(r){return filterFn(r)&&(activeScreen==='tp2'?ZCIQ_L:ZENV_L).includes(r.linea);}):
-                  PROD.filter(function(r){return filterFn(r)&&r.area===area;});
-      secT(label,col);
-      if(!pd.length){st(GY);doc.setFontSize(8);doc.text('Sin datos.',mg,y);y+=10;return;}
-      kRow(bKpis(pd,activeScreen));
+
+    // ── Simple text line ───────────────────────────────────────────────────
+    function txtLine(label, val, col){
+      if(y>ph-15){doc.addPage();hdr();}
+      st(GY); doc.setFontSize(7); doc.setFont('helvetica','normal');
+      doc.text(label,mg+2,y);
+      var rgb=col||WH; st(rgb);
+      doc.setFont('helvetica','bold');
+      doc.text(String(val),mg+70,y);
+      y+=6;
     }
-    hdr();
-    st(AC);doc.setFontSize(9);doc.setFont('helvetica','bold');
-    doc.text('Sem: '+wkMon.toLocaleDateString('es-CL')+' - '+wkSun.toLocaleDateString('es-CL'),mg,y);y+=7;
-    renderPd('SEMANA ANTERIOR',inWk,[59,130,246]);
-    doc.addPage();hdr();
-    st(GR);doc.setFontSize(9);doc.setFont('helvetica','bold');
-    doc.text('Mes: '+(MESES_F[pM]||pM)+' '+pY,mg,y);y+=7;
-    renderPd('MES ANTERIOR',inMo,[52,211,153]);
+
+    // ── Table ──────────────────────────────────────────────────────────────
+    function tbl(headers, rows, colWidths){
+      var rowH=6, hdrH=7;
+      if(y+hdrH+(rows.length*rowH)>ph-20 && rows.length>0){
+        if(y>ph/2){doc.addPage();hdr();}
+      }
+      // Header
+      var x=mg;
+      sf([20,35,70]); doc.rect(mg,y,cw,hdrH,'F');
+      headers.forEach(function(h,i){
+        st(MU); doc.setFontSize(6); doc.setFont('helvetica','bold');
+        doc.text(String(h).toUpperCase(),x+2,y+4.8);
+        x+=colWidths[i];
+      });
+      y+=hdrH;
+      // Rows
+      rows.forEach(function(row, ri){
+        if(y+rowH>ph-15){doc.addPage();hdr();}
+        if(ri%2===0){sf([14,22,45]);}else{sf([10,16,35]);}
+        doc.rect(mg,y,cw,rowH,'F');
+        var rx=mg;
+        row.forEach(function(cell,ci){
+          st(cell&&cell.c?cell.c:WH);
+          doc.setFontSize(6.5); doc.setFont('helvetica','normal');
+          var txt=String(cell&&cell.v!==undefined?cell.v:cell);
+          // truncate long text
+          var maxW=colWidths[ci]-3;
+          while(doc.getTextWidth(txt)>maxW&&txt.length>3)txt=txt.slice(0,-2)+'…';
+          doc.text(txt,rx+2,y+4);
+          rx+=colWidths[ci];
+        });
+        y+=rowH;
+      });
+      y+=4;
+    }
+
+    // ════════════════════════════════════════════════════════
+    // PAGE 1: RESUMEN SEMANA + ZCIQ KPIs
+    // ════════════════════════════════════════════════════════
+    hdr('Resumen Ejecutivo — '+semLabel);
+
+    // Semana info
+    sf(BG2); doc.roundedRect(mg,y,cw,10,2,2,'F');
+    sd(AC); doc.setLineWidth(0.5); doc.roundedRect(mg,y,cw,10,2,2,'S');
+    st(AC); doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text(semLabel,mg+5,y+6.5);
+    st(MU); doc.setFontSize(7);
+    var filtDesc = filtS?'Semana '+filtS+(filtA?' · '+filtA:''):filtA?'Año '+filtA:'Semana en curso';
+    doc.text('Filtro: '+filtDesc,mg+5+doc.getTextWidth(semLabel)+5,y+6.5);
+    doc.text('Generado: '+new Date().toLocaleString('es-CL'),pw-mg,y+6.5,{align:'right'});
+    y+=14;
+
+    // ── SECCIÓN 1: SELECCIÓN ZCIQ ───────────────────────────────────────────
+    secT('Selección ZCIQ — KPIs', AC);
+    var kgIn  = prodZCIQ.reduce(function(a,r){return a+r.kg_ingresados;},0);
+    var iqfAp = prodZCIQ.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+    var rend  = kgIn>0?(iqfAp/kgIn*100):0;
+    var teoMin= tdZCIQ.reduce(function(a,r){return a+r.minutos;},0);
+    var efecMin=tdZCIQ.reduce(function(a,r){return a+(r.efec_min||0);},0);
+    var disp  = teoMin>0?(efecMin/teoMin*100):0;
+    var tpTot = pdZCIQ.reduce(function(a,r){return a+r.minutos;},0);
+    var tpPlan= pdZCIQ.filter(function(r){return r.tipo_paro==='Paro Planificado';}).reduce(function(a,r){return a+r.minutos;},0);
+    var tpNP  = pdZCIQ.filter(function(r){return r.tipo_paro==='Paro No Planificado';}).reduce(function(a,r){return a+r.minutos;},0);
+    kRow([
+      {l:'Kg Ingresados',v:fmtN(kgIn),s:'materia prima',c:AC},
+      {l:'IQF Aprobado', v:fmtN(iqfAp),s:'kg aprobados',c:GR},
+      {l:'Rendimiento IQF',v:rend.toFixed(1)+'%',s:'meta 85%',c:rend>=85?GR:RD},
+      {l:'Disponibilidad',v:disp.toFixed(1)+'%',s:'t.efec/t.teo',c:disp>=85?GR:AM},
+    ]);
+    kRow([
+      {l:'T.Perdido Total',v:fmtN(tpTot)+' min',s:'suma todos los paros',c:RD},
+      {l:'T.Planificado', v:fmtN(tpPlan)+' min',s:'paros programados',c:AM},
+      {l:'T.No Planificado',v:fmtN(tpNP)+' min',s:'paros imprevistos',c:RD},
+      {l:'Eventos TP',   v:pdZCIQ.length,s:'registros',c:MU},
+    ]);
+
+    // ── Selección por Especie ───────────────────────────────────────────────
+    secT('Selección ZCIQ — Por Especie', [59,130,246]);
+    var especiesZCIQ = [...new Set(prodZCIQ.map(function(r){return r.especie;}))].filter(Boolean).sort();
+    if(especiesZCIQ.length){
+      var espRows = especiesZCIQ.map(function(esp){
+        var sub = prodZCIQ.filter(function(r){return r.especie===esp;});
+        var kg  = sub.reduce(function(a,r){return a+r.kg_ingresados;},0);
+        var iq  = sub.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+        var rd  = kg>0?(iq/kg*100):0;
+        var lineas = [...new Set(sub.map(function(r){return LS[r.linea]||r.linea;}))].join(', ');
+        return [
+          esp,
+          {v:fmtN(kg)+' kg', c:AC},
+          {v:fmtN(iq)+' kg', c:GR},
+          {v:rd.toFixed(1)+'%', c:rd>=85?GR:rd>=75?AM:RD},
+          lineas
+        ];
+      });
+      tbl(['Especie','Kg Ingr.','IQF Ap.','Rend.%','Líneas'],espRows,[40,38,38,28,42]);
+    }
+
+    // ── TP ZCIQ Top planificado y no planificado ────────────────────────────
+    if(pdZCIQ.length){
+      secT('TP Selección — Top 5 Planificado', AM);
+      var planZCIQ = pdZCIQ.filter(function(r){return r.tipo_paro==='Paro Planificado';})
+                           .sort(function(a,b){return b.minutos-a.minutos;}).slice(0,5);
+      if(planZCIQ.length){
+        var planRows = planZCIQ.map(function(r){
+          return [
+            r.fecha,
+            {v:LS[r.linea]||r.linea,c:AC},
+            r.falla.length>30?r.falla.slice(0,28)+'…':r.falla,
+            r.categoria,
+            {v:Math.round(r.minutos)+' min',c:AM}
+          ];
+        });
+        tbl(['Fecha','Línea','Causa','Categoría','Min'],[],[]); // skip, build inline
+        // use tbl with proper widths
+        tbl(['Fecha','Línea','Causa','Categoría','Min'],planRows,[25,18,65,45,33]);
+      }
+
+      secT('TP Selección — Top 5 No Planificado', RD);
+      var nplanZCIQ = pdZCIQ.filter(function(r){return r.tipo_paro==='Paro No Planificado';})
+                            .sort(function(a,b){return b.minutos-a.minutos;}).slice(0,5);
+      if(nplanZCIQ.length){
+        var nplanRows = nplanZCIQ.map(function(r){
+          return [
+            r.fecha,
+            {v:LS[r.linea]||r.linea,c:AC},
+            r.falla.length>30?r.falla.slice(0,28)+'…':r.falla,
+            r.categoria,
+            {v:Math.round(r.minutos)+' min',c:RD}
+          ];
+        });
+        tbl(['Fecha','Línea','Causa','Categoría','Min'],nplanRows,[25,18,65,45,33]);
+      }
+    }
+
+    // ════════════════════════════════════════════════════════
+    // PAGE N: ENVASADO ZENV
+    // ════════════════════════════════════════════════════════
+    doc.addPage(); hdr('Resumen Ejecutivo — '+semLabel+' (continuación)');
+    secT('Envasado ZENV — KPIs', GR);
+
+    var tonZENV  = prodZENV.reduce(function(a,r){return a+r.ton_real;},0);
+    var cajZENV  = prodZENV.reduce(function(a,r){return a+r.cajas;},0);
+    var teoCaj   = prodZENV.reduce(function(a,r){return a+r.teo_cajas;},0);
+    var conCaj   = prodZENV.reduce(function(a,r){return a+r.con_cajas;},0);
+    var teoBol   = prodZENV.reduce(function(a,r){return a+r.teo_bolsas;},0);
+    var conBol   = prodZENV.reduce(function(a,r){return a+r.con_bolsas;},0);
+    var mermaCaj = teoCaj>0?((conCaj-teoCaj)/teoCaj*100):0;
+    var mermaBol = teoBol>0?((conBol-teoBol)/teoBol*100):0;
+    var cajProg  = PROG.filter(function(p){
+      return prodZENV.some(function(r){return r.fecha===p.fecha&&(r.cod||'').trim()===p.cod.trim()&&r.turno===p.turno;});
+    }).reduce(function(a,p){return a+p.cajas_prog;},0);
+    var cumpl    = cajProg>0?(cajZENV/cajProg*100):null;
+    var bpmProm  = prodZENV.length?prodZENV.reduce(function(a,r){return a+r.bpm_total;},0)/prodZENV.length:0;
+    var dispZENV = tdZENV.length?
+      (tdZENV.reduce(function(a,r){return a+(r.efec_min||0);},0)/
+       tdZENV.reduce(function(a,r){return a+r.minutos;},0)*100):0;
+    var tpTotZENV = pdZENV.reduce(function(a,r){return a+r.minutos;},0);
+    var tpPlanZENV= pdZENV.filter(function(r){return r.tipo_paro==='Paro Planificado';}).reduce(function(a,r){return a+r.minutos;},0);
+    var tpNPZENV  = pdZENV.filter(function(r){return r.tipo_paro==='Paro No Planificado';}).reduce(function(a,r){return a+r.minutos;},0);
+
+    kRow([
+      {l:'Toneladas Reales',v:tonZENV.toFixed(2),s:'t reales',c:GR},
+      {l:'Cajas Producidas',v:fmtN(cajZENV),s:'unidades',c:AC},
+      {l:'Cajas Programadas',v:cajProg>0?fmtN(cajProg):'—',s:'según programa',c:AM},
+      {l:'Cumplimiento',v:cumpl!==null?cumpl.toFixed(1)+'%':'—',s:'vs programa',c:cumpl&&cumpl>=85?GR:RD},
+    ]);
+    kRow([
+      {l:'Merma Cajas',v:mermaCaj.toFixed(1)+'%',s:'consumo vs teórico',c:mermaCaj<5?GR:mermaCaj<15?AM:RD},
+      {l:'Merma Bolsas',v:mermaBol.toFixed(1)+'%',s:'consumo vs teórico',c:mermaBol<5?GR:mermaBol<15?AM:RD},
+      {l:'BPM Prom.',v:bpmProm.toFixed(1),s:'bolsas/min',c:AC},
+      {l:'Disponibilidad',v:dispZENV.toFixed(1)+'%',s:'t.efec/t.teo',c:dispZENV>=85?GR:AM},
+    ]);
+
+    // ── Top SKU Envasado ────────────────────────────────────────────────────
+    secT('Envasado ZENV — Top SKU por Cajas', [52,211,153]);
+    var bySku={};
+    prodZENV.forEach(function(r){
+      if(!r.sku)return;
+      if(!bySku[r.sku])bySku[r.sku]={cajas:0,ton:0};
+      bySku[r.sku].cajas+=r.cajas; bySku[r.sku].ton+=r.ton_real;
+    });
+    var topSku=Object.entries(bySku).sort(function(a,b){return b[1].cajas-a[1].cajas;}).slice(0,5);
+    if(topSku.length){
+      var skuRows=topSku.map(function(e,i){
+        return [
+          {v:String(i+1),c:AM},
+          e[0].length>45?e[0].slice(0,43)+'…':e[0],
+          {v:fmtN(e[1].cajas),c:AC},
+          {v:e[1].ton.toFixed(2)+' t',c:GR}
+        ];
+      });
+      tbl(['#','SKU','Cajas','Ton.'],skuRows,[10,110,36,30]);
+    }
+
+    // ── TP ZENV ─────────────────────────────────────────────────────────────
+    if(pdZENV.length){
+      kRow([
+        {l:'T.Perdido Total',v:fmtN(tpTotZENV)+' min',s:'suma todos los paros',c:RD},
+        {l:'T.Planificado', v:fmtN(tpPlanZENV)+' min',s:'paros programados',c:AM},
+        {l:'T.No Planificado',v:fmtN(tpNPZENV)+' min',s:'paros imprevistos',c:RD},
+        {l:'Eventos TP',   v:pdZENV.length,s:'registros',c:MU},
+      ]);
+
+      secT('TP Envasado — Top 5 Planificado', AM);
+      var planZENV = pdZENV.filter(function(r){return r.tipo_paro==='Paro Planificado';})
+                           .sort(function(a,b){return b.minutos-a.minutos;}).slice(0,5);
+      if(planZENV.length){
+        var pzRows = planZENV.map(function(r){
+          return [r.fecha,r.falla.length>40?r.falla.slice(0,38)+'…':r.falla,r.categoria,{v:Math.round(r.minutos)+' min',c:AM}];
+        });
+        tbl(['Fecha','Causa','Categoría','Min'],pzRows,[25,90,45,26]);
+      }
+
+      secT('TP Envasado — Top 5 No Planificado', RD);
+      var nplanZENV = pdZENV.filter(function(r){return r.tipo_paro==='Paro No Planificado';})
+                            .sort(function(a,b){return b.minutos-a.minutos;}).slice(0,5);
+      if(nplanZENV.length){
+        var npzRows = nplanZENV.map(function(r){
+          return [r.fecha,r.falla.length>40?r.falla.slice(0,38)+'…':r.falla,r.categoria,{v:Math.round(r.minutos)+' min',c:RD}];
+        });
+        tbl(['Fecha','Causa','Categoría','Min'],npzRows,[25,90,45,26]);
+      }
+    }
+
+    // ── Footer todas las páginas ─────────────────────────────────────────────
     var total=doc.getNumberOfPages();
-    for(var i=1;i<=total;i++){doc.setPage(i);sf(DK);doc.rect(0,ph-8,pw,8,'F');
-      st(GY);doc.setFontSize(6);doc.text('COMFRUT · Planta Curicó',mg,ph-3);
-      doc.text('Pag '+i+'/'+total,pw-mg,ph-3,{align:'right'});}
-    doc.save('Informe_'+names[activeScreen]+'_'+today.toLocaleDateString('es-CL').replace(/[/]/g,'-')+'.pdf');
-  }catch(err){alert('Error PDF: '+err.message);}
-  finally{if(btn){btn.textContent='📄 PDF';btn.disabled=false;}}
+    for(var i=1;i<=total;i++){
+      doc.setPage(i);
+      sf(DK); doc.rect(0,ph-8,pw,8,'F');
+      st(GY); doc.setFontSize(6); doc.setFont('helvetica','normal');
+      doc.text('COMFRUT · Planta Curicó · Reporte generado: '+new Date().toLocaleString('es-CL'),mg,ph-3);
+      doc.text('Pág '+i+'/'+total,pw-mg,ph-3,{align:'right'});
+    }
+
+    var semStr = filtS?'Sem'+filtS:(filtA?filtA:'actual');
+    doc.save('Resumen_'+semStr+'_'+new Date().toLocaleDateString('es-CL').replace(/\//g,'-')+'.pdf');
+
+  }catch(err){
+    console.error('PDF error:',err);
+    alert('Error al generar PDF: '+err.message);
+  }finally{
+    if(btn){btn.textContent='📄 Exportar PDF';btn.disabled=false;}
+  }
 }
+
+
 
 /* ══════════════════════════════════════════════════════
    RESUMEN EJECUTIVO — updateResumen()
@@ -4680,7 +4959,7 @@ function renderReArea(area, lines, filterR){
     var mermaCajVals=diasKeys.map(function(d){
       var teo=diasProd[d].teo_cajas;
       var con=diasProd[d].con_cajas;
-      return teo>0?parseFloat(((con-teo)/teo*100).toFixed(2)):0;
+      return teo>0?parseFloat(((con-teo)/teo*100).toFixed(1)):0;
     });
     dx('reChartMermaCaj');
     CH['reChartMermaCaj']=new Chart(document.getElementById('reChartMermaCaj'),{
@@ -4694,7 +4973,7 @@ function renderReArea(area, lines, filterR){
           tooltip:{callbacks:{label:function(ctx){return 'Merma: '+ctx.raw+'%';}}}},
         scales:{
           x:{grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:7},maxRotation:35}},
-          y:{grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:8},callback:function(v){return v+'%';}},
+          y:{grid:{color:CC.grid},ticks:{color:CC.txt,font:{size:8},callback:function(v){return (+v).toFixed(1)+'%';}},
             title:{display:true,text:'% Merma',color:CC.txt,font:{size:8}}}
         }
       }
@@ -4704,7 +4983,7 @@ function renderReArea(area, lines, filterR){
     var mermaBolVals=diasKeys.map(function(d){
       var teo=diasProd[d].teo_bolsas;
       var con=diasProd[d].con_bolsas;
-      return teo>0?parseFloat(((con-teo)/teo*100).toFixed(2)):0;
+      return teo>0?parseFloat(((con-teo)/teo*100).toFixed(1)):0;
     });
     dx('reChartMermaBol');
     CH['reChartMermaBol']=new Chart(document.getElementById('reChartMermaBol'),{
@@ -4968,6 +5247,32 @@ function goCurrentSem(pfx){
     var lines = pfx==='tp2'?ZCIQ_L:ZENV_L;
     updateAreaTP(pfx, area, lines);
   }
+}
+
+/* ── Cascade chart Plan/NoPlan filter ─────────────────── */
+function setCascFilter(btn){
+  var cid = btn.getAttribute('data-cid');
+  var tipo = btn.getAttribute('data-ctipo');
+  if(!cid) return;
+  var parts = cid.split('|');
+  var id1 = parts[0], id2 = parts[1];
+  var stored = window._lineTD && window._lineTD[id1+'|'+id2];
+  if(!stored) return;
+  var pd = stored.pd, td = stored.td;
+  var filtered = tipo==='plan'   ? pd.filter(function(r){return r.tipo_paro==='Paro Planificado';})
+               : tipo==='noplan' ? pd.filter(function(r){return r.tipo_paro==='Paro No Planificado';})
+               : pd;
+  // Update button styles
+  var btns = document.querySelectorAll('[data-cid="'+cid+'"]');
+  btns.forEach(function(b){
+    var active = b.getAttribute('data-ctipo')===tipo;
+    b.style.background    = active?'rgba(59,130,246,.3)':'rgba(255,255,255,.05)';
+    b.style.borderColor   = active?'rgba(59,130,246,.5)':'rgba(255,255,255,.12)';
+    b.style.color         = active?'#93c5fd':'var(--mut)';
+    b.style.fontWeight    = active?'700':'400';
+  });
+  // Re-render cascade
+  buildCasc(id1, id2, filtered, td);
 }
 
 /* INIT */
