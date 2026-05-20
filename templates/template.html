@@ -601,14 +601,15 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   </div>
 <div class="fbar-sticky" id="fbarStickyTP2">
     <div class="fbar-toggle" onclick="tfbar('tp2')">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div class="lgh-dot" style="background:var(--acc);width:8px;height:8px;border-radius:50%;"></div>
-        <span class="fbar-toggle-lbl">🔵 Selección ZCIQ — Filtros</span>
-        <div class="fbar-toggle-pills" id="fbarPillsTP2"></div>
+      <div class="fbar-left">
+        <div class="fbar-dot" style="background:var(--acc)"></div>
+        <span class="ftlbl">🔵 Selección ZCIQ — Filtros</span>
+        <div class="ft-pills" id="pillsTP2"></div>
       </div>
-      <span class="fbar-toggle-arrow open" id="farr2">▼</span>
+      <span class="farrow open" id="farr_tp2">▼</span>
     </div>
-    <div class="fbar-inner exp" id="fi2">
+    <div class="fbar-inner exp" id="fi_tp2">
+
       <div class="fg"><div class="fl">Año</div><select id="tp2A"><option value="">Todos</option></select></div>
       <div class="fg"><div class="fl">Mes</div><select id="tp2M"><option value="">Todos</option></select></div>
       <div class="fg"><div class="fl">Semana</div><select id="tp2S"><option value="">Todas</option></select></div>
@@ -627,14 +628,15 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   </div>
 <div class="fbar-sticky" id="fbarStickyTP3">
     <div class="fbar-toggle" onclick="tfbar('tp3')">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div class="lgh-dot" style="background:var(--cyn);width:8px;height:8px;border-radius:50%;"></div>
-        <span class="fbar-toggle-lbl">📦 Envasado ZENV — Filtros</span>
-        <div class="fbar-toggle-pills" id="fbarPillsTP3"></div>
+      <div class="fbar-left">
+        <div class="fbar-dot" style="background:var(--amb)"></div>
+        <span class="ftlbl">📦 Envasado ZENV — Filtros</span>
+        <div class="ft-pills" id="pillsTP3"></div>
       </div>
-      <span class="fbar-toggle-arrow open" id="farr3">▼</span>
+      <span class="farrow open" id="farr_tp3">▼</span>
     </div>
-    <div class="fbar-inner exp" id="fi3">
+    <div class="fbar-inner exp" id="fi_tp3">
+
       <div class="fg"><div class="fl">Año</div><select id="tp3A"><option value="">Todos</option></select></div>
       <div class="fg"><div class="fl">Mes</div><select id="tp3M"><option value="">Todos</option></select></div>
       <div class="fg"><div class="fl">Semana</div><select id="tp3S"><option value="">Todas</option></select></div>
@@ -787,8 +789,8 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   <div class="slbl">Análisis por Especie (click para expandir)</div>
   <div id="s2Lines"></div>
 
-  <div class="slbl">Top 3 Días — por Especie</div>
-  <div class="tbl-outer" id="s2Tbls"></div>
+  <div class="slbl">Top 3 Días Temporada — por Especie</div>
+  <div id="s2Tbls" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
 </div>
 
 <!-- ═══ ENVASADO ═══ -->
@@ -843,6 +845,9 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   <div class="slbl">Análisis por Línea (click para expandir)</div>
   <div id="s3Lines"></div>
 
+  <div class="slbl">Top 3 Temporada — Días y SKU</div>
+  <div id="s3Tbls" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+
   <!-- SKU ANALYSIS - ONLY IN ENVASADO -->
   <div class="slbl">Análisis por SKU — Envasado</div>
   <div class="gc" style="margin-bottom:12px;">
@@ -874,9 +879,6 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
     </div>
     <div id="s3SkuTable" style="overflow-x:auto;margin-top:10px;"></div>
   </div>
-
-  <div class="slbl">Top 3 Días — Envasado</div>
-  <div class="tbl-outer" id="s3Tbls"></div>
 </div>
 
 <div class="scr" id="tp2">
@@ -942,8 +944,8 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   <div class="slbl">Análisis por Línea — Agrupado (click para expandir)</div>
   <div id="tp2Lines"></div>
 
-  <div class="slbl">Top 5 Eventos por Línea</div>
-  <div class="tbl-outer" id="tp2Tbls"></div>
+  <div class="slbl">Top 5 Temporada — Planificados y No Planificados</div>
+  <div id="tp2Tbls" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
 </div>
 
 <!-- SCREEN 3: ENVASADO -->
@@ -1008,8 +1010,8 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   <div class="slbl">Análisis por Línea — Agrupado (click para expandir)</div>
   <div id="tp3Lines"></div>
 
-  <div class="slbl">Top 5 Eventos por Línea</div>
-  <div class="tbl-outer" id="tp3Tbls"></div>
+  <div class="slbl">Top 5 Temporada — Planificados y No Planificados</div>
+  <div id="tp3Tbls" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
 </div>
 <!-- ═══ RESUMEN EJECUTIVO ═══ -->
 <div class="scr" id="re">
@@ -1390,10 +1392,11 @@ function cascSD(pfx,sdKey){
 
 /* STICKY FBAR */
 function tfbar(pfx){
-  const n=pfx.slice(-1);
-  const inner=el('fi'+n),arrow=el('farr'+n);
+  // Support both short (s2→'2') and full (tp2→'_tp2') prefix IDs
+  var sfx = pfx==='tp2'?'_tp2':pfx==='tp3'?'_tp3':pfx.slice(-1);
+  var inner=el('fi'+sfx), arrow=el('farr'+sfx);
   if(!inner||!arrow)return;
-  const open=inner.classList.contains('exp');
+  var open=inner.classList.contains('exp');
   inner.classList.toggle('exp',!open); inner.classList.toggle('col',open);
   arrow.classList.toggle('open',!open);
 }
@@ -2436,25 +2439,45 @@ function buildTbls2(pd){
   var tEl=el('s2Tbls');
   if(tEl){
     tEl.innerHTML=(html||htmlLine)?
-      '<div class="tbl-outer">'+html+htmlLine+'</div>':
-      '<span style="color:var(--mut)">Sin datos</span>';
+      html+htmlLine:
+      '<span style="color:var(--mut);font-size:11px;padding:10px;display:block">Sin datos para el período</span>';
   }
 }
 function buildTbls3(pd){
+  var tEl=el('s3Tbls'); if(!tEl)return;
+  // Top 3 días por ton
   var byDay={};
   pd.forEach(function(r){
     if(!byDay[r.fecha])byDay[r.fecha]={ton:0,cajas:0,esp:r.especie};
-    byDay[r.fecha].ton+=r.ton_real;byDay[r.fecha].cajas+=r.cajas;});
-  var top=Object.entries(byDay).sort(function(a,b){return b[1].ton-a[1].ton;}).slice(0,3);
-  var tEl=el('s3Tbls'); if(!tEl)return;
-  tEl.innerHTML=top.length?'<div class="tcard" style="grid-column:1/-1"><div class="thd">'+
-    '<span class="tht">Envasado</span><span class="thc">Top 3</span></div>'+
+    byDay[r.fecha].ton+=r.ton_real; byDay[r.fecha].cajas+=r.cajas;
+  });
+  var topDias=Object.entries(byDay).sort(function(a,b){return b[1].ton-a[1].ton;}).slice(0,3);
+  var htmlDias=topDias.length?'<div class="tcard"><div class="thd">'+
+    '<span class="tht">🏆 Top 3 Días</span><span class="thc">por Toneladas</span></div>'+
     '<table><thead><tr><th>Fecha</th><th>Especie</th><th>Ton.</th><th>Cajas</th></tr></thead><tbody>'+
-    top.map(function(e){return'<tr><td style="white-space:nowrap">'+e[0]+'</td>'+
+    topDias.map(function(e){return'<tr>'+
+      '<td style="white-space:nowrap">'+e[0]+'</td>'+
       '<td>'+e[1].esp+'</td>'+
       '<td style="font-family:var(--mono);color:var(--grn)">'+e[1].ton.toFixed(2)+'</td>'+
       '<td style="font-family:var(--mono)">'+fmt(e[1].cajas)+'</td></tr>';}).join('')+
-    '</tbody></table></div>':'<span style="color:var(--mut)">Sin datos</span>';
+    '</tbody></table></div>':'';
+  // Top 3 SKU por cajas producidas
+  var bySku={};
+  pd.forEach(function(r){
+    if(!r.sku)return;
+    if(!bySku[r.sku])bySku[r.sku]={cajas:0,ton:0};
+    bySku[r.sku].cajas+=r.cajas; bySku[r.sku].ton+=r.ton_real;
+  });
+  var topSku=Object.entries(bySku).sort(function(a,b){return b[1].cajas-a[1].cajas;}).slice(0,3);
+  var htmlSku=topSku.length?'<div class="tcard"><div class="thd">'+
+    '<span class="tht">📦 Top 3 SKU</span><span class="thc">por Cajas</span></div>'+
+    '<table><thead><tr><th>SKU</th><th>Cajas</th><th>Ton.</th></tr></thead><tbody>'+
+    topSku.map(function(e){return'<tr>'+
+      '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="'+e[0]+'">'+e[0]+'</td>'+
+      '<td style="font-family:var(--mono);color:var(--acc2);font-weight:700">'+fmt(e[1].cajas)+'</td>'+
+      '<td style="font-family:var(--mono);color:var(--grn)">'+e[1].ton.toFixed(2)+'</td></tr>';}).join('')+
+    '</tbody></table></div>':'';
+  tEl.innerHTML=(htmlDias||htmlSku)?htmlDias+htmlSku:'<span style="color:var(--mut);font-size:11px;padding:10px;display:block">Sin datos para el período</span>';
 }
 
 /* ── MAIN UPDATE ── */
@@ -2463,9 +2486,9 @@ function updateArea(pfx){
   var lines=pfx==='s2'?ZCIQ_L:ZENV_L;
   var o=getOpts(pfx,area); var pd=fp(o);
   if(pfx==='s2'){
-    buildKpiS2(pd); buildS2Charts(pd); buildS2Lines(pd); buildTbls2(pd);
+    buildKpiS2(pd); buildS2Charts(pd); buildS2Lines(pd); buildTbls2(PROD.filter(function(r){return r.area==='ZCIQ';}));
   } else {
-    buildKpiS3(pd); buildS3Charts(pd); buildS3Lines(pd); buildTbls3(pd);
+    buildKpiS3(pd); buildS3Charts(pd); buildS3Lines(pd); buildTbls3(PROD.filter(function(r){return r.area==='ZENV';}));
     try{window._lastS3=pd;}catch(e){}
     var esps=[...new Set(pd.map(function(r){return r.especie;}).filter(Boolean))].sort();
     var skEl=el('s3SkuEsp');
@@ -3516,28 +3539,36 @@ function toggleLGTP(hd){
 }
 
 function buildTbls(cid,pd,lines){
-  var h='';
-  lines.forEach(function(l){
-    var sub=pd.filter(function(r){return r.linea===l;}).sort(function(a,b){return b.minutos-a.minutos;}).slice(0,10);
-    if(!sub.length)return;
-    var tot=pd.filter(function(r){return r.linea===l;}).length;
-    h+='<div class="tcard"><div class="thd">'+
-      '<span class="tht">'+(LMAP[l]||l)+'</span><span class="thc">Top 10 de '+tot+'</span></div>'+
-      '<table><thead><tr><th>Fecha</th><th>Causa</th><th>Obs.</th><th>Cat.</th><th>Tipo</th><th>Min</th></tr></thead>'+
-      '<tbody>'+sub.map(function(r){
-        var obsText = r.obs && r.obs!=='nan' ? r.obs : '—';
-        var tipoColor = r.tipo_paro.includes('No') ? CC.amb : CC.txt;
-        var tipoLabel = r.tipo_paro.includes('No') ? 'No Plan.' : 'Plan.';
-        var minColor  = r.minutos>=120 ? CC.red : r.minutos>=60 ? CC.amb : CC.txt;
+  function mkTopTable(title, color, events, n){
+    if(!events.length)return '';
+    var top=events.sort(function(a,b){return b.minutos-a.minutos;}).slice(0,n);
+    return '<div class="tcard"><div class="thd" style="border-left:3px solid '+color+'">'+
+      '<span class="tht">'+title+'</span><span class="thc">Top '+n+'</span></div>'+
+      '<table><thead><tr><th>Línea</th><th>Causa</th><th>Cat.</th><th>Min</th></tr></thead>'+
+      '<tbody>'+top.map(function(r){
+        var minColor=r.minutos>=120?CC.red:r.minutos>=60?CC.amb:CC.txt;
+        var lineLbl=LMAP[r.linea]||r.linea;
         return '<tr>'+
-          '<td style="white-space:nowrap">'+r.fecha+'</td>'+
-          '<td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r.falla+'">'+r.falla+'</td>'+
-          '<td style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.6);font-size:10px" title="'+obsText+'">'+obsText+'</td>'+
+          '<td style="font-size:10px;white-space:nowrap;color:'+CC.acc+'">'+lineLbl+'</td>'+
+          '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="'+r.falla+'">'+r.falla+'</td>'+
           '<td><span class="bdg '+(BDGC[r.categoria]||'bp')+'">'+r.categoria+'</span></td>'+
-          '<td style="font-size:9px;color:'+tipoColor+'">'+tipoLabel+'</td>'+
           '<td style="font-family:var(--mono);font-weight:700;color:'+minColor+'">'+Math.round(r.minutos)+'</td>'+
         '</tr>';
       }).join('')+'</tbody></table></div>';
+  }
+  // All lines combined for global Top 5
+  var plan   = pd.filter(function(r){return r.tipo_paro==='Paro Planificado';});
+  var noplan = pd.filter(function(r){return r.tipo_paro==='Paro No Planificado';});
+  var h = mkTopTable('✅ Top 5 Planificados',   CC.grn, plan,   5) +
+          mkTopTable('⚡ Top 5 No Planificados', CC.red, noplan, 5);
+  // Per-line breakdown
+  lines.forEach(function(l){
+    var subL=pd.filter(function(r){return r.linea===l;});
+    if(!subL.length)return;
+    var planL  =subL.filter(function(r){return r.tipo_paro==='Paro Planificado';});
+    var noplanL=subL.filter(function(r){return r.tipo_paro==='Paro No Planificado';});
+    h+=mkTopTable((LMAP[l]||l)+' · Plan.',    CC.grn, planL,   5);
+    h+=mkTopTable((LMAP[l]||l)+' · No Plan.', CC.red, noplanL, 5);
   });
   var elTbl=document.getElementById(cid);
   if(elTbl)elTbl.innerHTML=h||'<span style="color:var(--mut);font-size:11px">Sin datos</span>';
@@ -3794,7 +3825,7 @@ function updateAreaTP(pfx,area,lines){
     mkBarStk(pfx+'Top3NoPlan',lbls.labels,ds);
   }, 'mes', {});
   // Tables
-  buildTbls(pfx+'Tbls',pd,lActual);
+  buildTbls(pfx+'Tbls',PD.filter(function(r){return r.area===area;}),lines);
   // Update active filter pills on sticky bar
   updateFbarPills(pfx);
 }
@@ -4093,7 +4124,7 @@ function updateResumen(){
   var reSEl=document.getElementById('reS');
   var curA=reAEl?reAEl.value:''; var curS=reSEl?reSEl.value:'';
   if(reAEl){
-    reAEl.innerHTML='<option value="">Sem. actual</option>';
+    reAEl.innerHTML='<option value="">Todos</option>';
     var años=[...new Set(PROD.map(function(r){return r.año;}))].sort();
     años.forEach(function(a){var o=document.createElement('option');o.value=a;o.text=a;reAEl.appendChild(o);});
     if(curA)reAEl.value=curA;
@@ -4953,6 +4984,10 @@ try{
   setupCascadeTP('tp3','MS_ZENV','SD_ZENV',function(){updateAreaTP('tp3','ZENV',ZENV_L);});
 }catch(e){console.warn('TP init:',e);}
 goTo('s0', el('tb0'));
+// Pre-load the first data screen (s2) after init
+setTimeout(function(){
+  try{ updateResumen(); }catch(e){}
+}, 300);
 </script>
 </body>
 </html>
