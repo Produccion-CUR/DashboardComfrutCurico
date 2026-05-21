@@ -4378,18 +4378,17 @@ var _rePD = {ZCIQ:[], ZENV:[]};
 
 function updateResumen(){
   if(!PROD||!PROD.length)return;
-  // Detect current week
+  // Detect current ISO week number
   var today=new Date();
-  var dayOfWeek=today.getDay();
-  var mondayOffset=dayOfWeek===0?-6:1-dayOfWeek;
-  var weekMon=new Date(today); weekMon.setDate(today.getDate()+mondayOffset);
-  var weekSun=new Date(weekMon); weekSun.setDate(weekMon.getDate()+6);
-  function inWeek(r){
-    if(!r.fecha)return false;
-    var p=r.fecha.split('-');
-    var d=new Date(+p[0],+p[1]-1,+p[2]);
-    return d>=weekMon&&d<=weekSun;
+  function getISOWeek(d){
+    var tmp=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+    var day=tmp.getUTCDay()||7;
+    tmp.setUTCDate(tmp.getUTCDate()+4-day);
+    var yearStart=new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
+    return Math.ceil(((tmp-yearStart)/86400000+1)/7);
   }
+  var curISOWeek=getISOWeek(today);
+  var curYear=today.getFullYear();
   var selA=document.getElementById('reA');
   var selS=document.getElementById('reS');
   var filtA=selA?selA.value:'';
@@ -4397,7 +4396,8 @@ function updateResumen(){
   function filterR(r){
     if(filtA&&String(r.año)!==filtA)return false;
     if(filtS&&String(r.semana)!==filtS)return false;
-    if(!filtA&&!filtS)return inWeek(r);
+    // No filter: use current ISO week number (same logic as dropdown)
+    if(!filtA&&!filtS) return r.semana===curISOWeek&&r.año===curYear;
     return true;
   }
   // Refresh dropdowns (always, to pick up new Excel data)
@@ -4420,14 +4420,13 @@ function updateResumen(){
   // Try current week first; if empty, fall back to latest semana in data
   var prodFiltered=PROD.filter(filterR);
   if(!prodFiltered.length && !filtA && !filtS){
-    // No data for current week → use latest semana BY DATE (not by number)
+    // No data for current ISO week → use latest semana BY DATE
     var sortedByDate=[...PROD].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
     var latestFecha=sortedByDate.length?sortedByDate[0].fecha:'';
-    var latestSem=latestFecha?PROD.find(function(r){return r.fecha===latestFecha;}).semana:0;
-    var latestAno=latestFecha?PROD.find(function(r){return r.fecha===latestFecha;}).año:0;
-    if(latestSem) prodFiltered=PROD.filter(function(r){return r.semana===latestSem&&r.año===latestAno;});
+    var latestRec=latestFecha?PROD.find(function(r){return r.fecha===latestFecha;}):null;
+    if(latestRec) prodFiltered=PROD.filter(function(r){return r.semana===latestRec.semana&&r.año===latestRec.año;});
   }
-  var semNum=prodFiltered.length?prodFiltered[0].semana:'?';
+  var semNum=prodFiltered.length?prodFiltered[0].semana:(!filtA&&!filtS?curISOWeek:'?');
   var semLabel=document.getElementById('reSemLabel');
   if(semLabel)semLabel.textContent='Semana '+semNum+(filtA?' · '+filtA:'');
   var luEl=document.getElementById('reLastUpdate');
