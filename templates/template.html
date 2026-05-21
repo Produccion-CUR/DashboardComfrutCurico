@@ -108,10 +108,10 @@ select:focus{outline:none;border-color:var(--grn);}
 .esp-filter-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .esp-filter-row 
 table{width:100%;border-collapse:collapse;font-size:11px;}
-thead th{padding:5px 9px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;
+thead th{padding:3px 6px;text-align:left;font-size:8px;font-weight:700;text-transform:uppercase;
   letter-spacing:.05em;color:var(--mut);border-bottom:1px solid var(--brd);background:rgba(255,255,255,.02);}
 tbody tr:hover{background:rgba(255,255,255,.04);}
-tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
+tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
 .tbl-outer{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;}
 .tcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px;margin-bottom:12px;}
 .tc{background:rgba(255,255,255,.04);border:1px solid var(--brd);border-radius:var(--rs);
@@ -120,8 +120,8 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
 .tccat{font-size:11px;font-weight:700;margin-bottom:2px;}
 .tcmin{font-family:var(--mono);font-size:14px;font-weight:700;}
 .tcsub{font-size:9px;color:var(--dim);margin-top:2px;}
-.tcard{background:var(--card);border:1px solid var(--brd);border-radius:var(--rs);overflow:hidden;}
-.thd{background:rgba(34,197,94,.12);border-bottom:1px solid var(--brd);padding:7px 12px;
+.tcard{background:var(--card);border:1px solid var(--brd);border-radius:var(--rs);overflow:hidden;font-size:10px;}
+.thd{background:rgba(34,197,94,.12);border-bottom:1px solid var(--brd);padding:5px 10px;
   display:flex;justify-content:space-between;align-items:center;}
 .tht{font-size:10px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.05em;}
 .thc{font-size:10px;color:var(--mut);}
@@ -147,7 +147,7 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   #reEspecieCards>div{min-width:unset!important;}
   #reLineaEspCards{font-size:10px;}
   #reTopEnvasado table{font-size:10px;}
-  #reTopEnvasado th,#reTopEnvasado td{padding:4px 6px!important;}
+  #reTopEnvasado th,#reTopEnvasado td{padding:3px 5px!important;}
   .cw.h240{height:180px!important;}
   .cw.h220{height:170px!important;}
   .cw.h180{height:140px!important;}
@@ -526,6 +526,8 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
 .fbar-sticky.active{display:block;}
 @media(max-width:768px){.fbar-sticky{padding:0 12px;}}
 @media(max-width:480px){.fbar-sticky{padding:0 10px;}}
+@media(max-width:600px){#s2Tbls,#s3Tbls,#tp2Tbls,#tp3Tbls{grid-template-columns:1fr!important;}}
+@media(min-width:601px) and (max-width:900px){#s2Tbls,#s3Tbls,#tp2Tbls,#tp3Tbls{grid-template-columns:repeat(2,1fr)!important;}}
 </style>
 </head>
 <body>
@@ -789,7 +791,7 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   <div id="s2Lines"></div>
 
   <div class="slbl">Top 3 Días Temporada — por Especie</div>
-  <div id="s2Tbls" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+  <div id="s2Tbls" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;"></div>
 </div>
 
 <!-- ═══ ENVASADO ═══ -->
@@ -845,7 +847,7 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   <div id="s3Lines"></div>
 
   <div class="slbl">Top 3 Temporada — Días y SKU</div>
-  <div id="s3Tbls" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+  <div id="s3Tbls" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;"></div>
 
   <!-- SKU ANALYSIS - ONLY IN ENVASADO -->
   <div class="slbl">Análisis por SKU — Envasado</div>
@@ -944,7 +946,7 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   <div id="tp2Lines"></div>
 
   <div class="slbl">Top 5 Temporada — Planificados y No Planificados</div>
-  <div id="tp2Tbls" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+  <div id="tp2Tbls" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;"></div>
 </div>
 
 <!-- SCREEN 3: ENVASADO -->
@@ -1010,7 +1012,7 @@ tbody td{padding:5px 9px;border-bottom:1px solid rgba(255,255,255,.04);}
   <div id="tp3Lines"></div>
 
   <div class="slbl">Top 5 Temporada — Planificados y No Planificados</div>
-  <div id="tp3Tbls" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+  <div id="tp3Tbls" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;"></div>
 </div>
 <!-- ═══ RESUMEN EJECUTIVO ═══ -->
 <div class="scr" id="re">
@@ -1271,7 +1273,8 @@ Chart.defaults.color='rgba(200,215,255,0.75)';
 
 const fmt=n=>n==null?'—':Math.round(n).toLocaleString('es-CL');
 const fmtD=n=>n==null?'—':n.toFixed(1);
-const fmtK=n=>fmt(n);  // sin abreviaciones K/M
+const fmtK=n=>fmt(n);
+const fmtFecha=f=>{if(!f)return '—';var p=f.split('-');return p[2]+'-'+p[1]+'-'+(p[0]||'').slice(-2);};  // sin abreviaciones K/M
 function sv(id){const e=document.getElementById(id);return e?e.value:'';}
 function el(id){return document.getElementById(id);}
 function dx(id){if(CH[id]){try{CH[id].destroy();}catch(e){}delete CH[id];}}
@@ -2411,7 +2414,7 @@ function buildTbls2(pd){
       '<table><thead><tr><th>Fecha</th><th>Kg Ingr.</th><th>IQF Ap.</th><th>Rend.%</th></tr></thead><tbody>'+
       top.map(function(e){var rend=e[1].kgIn>0?(e[1].kgAp/e[1].kgIn*100):0;
         var rc=rend>=90?C.grn:rend>=80?C.amb:C.red;
-        return'<tr><td style="white-space:nowrap">'+e[0]+'</td>'+
+        return'<tr><td style="white-space:nowrap">'+fmtFecha(e[0])+'</td>'+
           '<td style="font-family:var(--mono)">'+fmtK(e[1].kgIn)+'</td>'+
           '<td style="font-family:var(--mono)">'+fmtK(e[1].kgAp)+'</td>'+
           '<td style="font-family:var(--mono);color:'+rc+'">'+rend.toFixed(1)+'%</td></tr>';}).join('')+
@@ -2432,7 +2435,7 @@ function buildTbls2(pd){
     htmlLine+='<div class="tcard"><div class="thd" style="border-left:3px solid '+lc+'"><span class="tht">'+(LMAP[l]||l)+'</span><span class="thc">Top 3</span></div>'+
       '<table><thead><tr><th>Fecha</th><th>Kg Ingr.</th><th>IQF Ap.</th><th>Rend.%</th></tr></thead><tbody>'+
       top.map(function(e){var rend=e[1].kgIn>0?(e[1].kgAp/e[1].kgIn*100):0;var rc=rend>=90?C.grn:rend>=80?C.amb:C.red;
-        return'<tr><td style="white-space:nowrap">'+e[0]+'</td>'+
+        return'<tr><td style="white-space:nowrap">'+fmtFecha(e[0])+'</td>'+
           '<td style="font-family:var(--mono)">'+fmtK(e[1].kgIn)+'</td>'+
           '<td style="font-family:var(--mono)">'+fmtK(e[1].kgAp)+'</td>'+
           '<td style="font-family:var(--mono);color:'+rc+'">'+rend.toFixed(1)+'%</td></tr>';}).join('')+
@@ -2458,7 +2461,7 @@ function buildTbls3(pd){
     '<span class="tht">🏆 Top 3 Días</span><span class="thc">por Toneladas</span></div>'+
     '<table><thead><tr><th>Fecha</th><th>Especie</th><th>Ton.</th><th>Cajas</th></tr></thead><tbody>'+
     topDias.map(function(e){return'<tr>'+
-      '<td style="white-space:nowrap">'+e[0]+'</td>'+
+      '<td style="white-space:nowrap">'+fmtFecha(e[0])+'</td>'+
       '<td>'+e[1].esp+'</td>'+
       '<td style="font-family:var(--mono);color:var(--grn)">'+e[1].ton.toFixed(2)+'</td>'+
       '<td style="font-family:var(--mono)">'+fmt(e[1].cajas)+'</td></tr>';}).join('')+
@@ -3107,7 +3110,7 @@ function v6ddGetLabels(pd,td,level,ctx){
     if(ctx&&ctx.sem) base2=base2.filter(r=>r.semana==ctx.sem);
     const set=new Set();base2.forEach(r=>{if(r.fecha)set.add(r.fecha);});
     const dates=[...set].sort();
-    return{keys:dates,labels:dates.map(d=>{const dt=new Date(d);return dt.getDate()+'/'+(dt.getMonth()+1);}),level:'dia'};
+    return{keys:dates,labels:dates.map(d=>{var p=d.split('-');return p[2]+'-'+p[1];}),level:'dia'};
   }
 }
 
@@ -3295,7 +3298,7 @@ function mkDispLine(id,lines,pd,td,groupBy){
     lblFn=function(k){return k.replace('-S','S');};
   } else {
     grpFn=function(r){return r.fecha;};
-    lblFn=function(k){var dt=new Date(k);return dt.getDate()+'/'+(dt.getMonth()+1);};
+    lblFn=function(k){var dt=new Date(k);return (('0'+dt.getDate()).slice(-2)+'-'+('0'+(dt.getMonth()+1)).slice(-2));};
   }
   var keySet=new Set();
   td.forEach(function(r){if(r.linea&&lines.includes(r.linea))keySet.add(grpFn(r));});
@@ -3369,7 +3372,7 @@ function mkTend(id,pd){
     if(r.tipo_paro==='Paro Planificado')mp[r.fecha]=(mp[r.fecha]||0)+r.minutos;
     else mn[r.fecha]=(mn[r.fecha]||0)+r.minutos;});
   const days=[...new Set([...Object.keys(mp),...Object.keys(mn)])].sort();
-  const lbls=days.map(d=>{const dd=new Date(d);return dd.getDate()+'/'+(dd.getMonth()+1);});
+  const lbls=days.map(d=>{const dd=new Date(d);return (('0'+dd.getDate()).slice(-2)+'-'+('0'+(dd.getMonth()+1)).slice(-2));});
   mkBarStk(id,lbls,[
     {label:'Plan.',data:days.map(d=>Math.round(mp[d]||0)),backgroundColor:'rgba(34,197,94,.7)',borderRadius:2,stack:'s'},
     {label:'No Plan.',data:days.map(d=>Math.round(mn[d]||0)),backgroundColor:'rgba(239,68,68,.8)',borderRadius:2,stack:'s'}]);
@@ -3555,6 +3558,7 @@ function buildTbls(cid,pd,lines){
         var minColor=r.minutos>=120?CC.red:r.minutos>=60?CC.amb:CC.txt;
         var lineLbl=LMAP[r.linea]||r.linea;
         return '<tr>'+
+          '<td style="font-size:10px;white-space:nowrap;color:var(--mut);">'+fmtFecha(r.fecha)+'</td>'+
           '<td style="font-size:10px;white-space:nowrap;color:'+CC.acc+'">'+lineLbl+'</td>'+
           '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="'+r.falla+'">'+r.falla+'</td>'+
           '<td><span class="bdg '+(BDGC[r.categoria]||'bp')+'">'+r.categoria+'</span></td>'+
@@ -4677,6 +4681,7 @@ function renderReArea(area, lines, filterR){
         '<div style="font-size:9px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">Top 5 eventos:</div>'+
         '<table style="width:100%;border-collapse:collapse;font-size:10px;">'+
         '<thead><tr style="background:rgba(15,25,50,.7);">'+
+        '<th style="padding:4px 6px;text-align:left;color:var(--mut);font-size:8px;">Fecha</th>'+
         '<th style="padding:4px 6px;text-align:left;color:var(--mut);font-size:8px;">Categoría</th>'+
         '<th style="padding:4px 6px;text-align:left;color:var(--mut);font-size:8px;">Línea</th>'+
         '<th style="padding:4px 6px;text-align:left;color:var(--mut);font-size:8px;">Causa</th>'+
@@ -4691,7 +4696,8 @@ function renderReArea(area, lines, filterR){
           var catLbl=r.categoria||'—';
           var catColor=CAT_C[catLbl]||'rgba(255,255,255,.5)';
           return '<tr style="background:'+bg+';border-bottom:1px solid rgba(255,255,255,.03);">'+
-            '<td style="padding:4px 6px;font-size:9px;font-weight:600;color:'+catColor+';white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;" title="'+catLbl+'">'+catLbl+'</td>'+
+            '<td style="padding:4px 6px;font-size:9px;white-space:nowrap;color:var(--mut);">'+fmtFecha(r.fecha)+'</td>'+
+            '<td style="padding:4px 6px;font-size:9px;font-weight:600;color:'+catColor+';white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis;" title="'+catLbl+'">'+catLbl+'</td>'+
             '<td style="padding:4px 6px;color:'+color+';font-weight:700;white-space:nowrap;">'+linea+'</td>'+
             '<td style="padding:4px 6px;color:var(--txt);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+r.falla+'">'+r.falla+'</td>'+
             '<td style="padding:4px 6px;color:rgba(255,255,255,.55);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;" title="'+obs+'">'+obs+'</td>'+
@@ -4845,7 +4851,7 @@ function renderReArea(area, lines, filterR){
       });
       // Get all days with production
       var allDays=[...new Set(prod.map(function(r){return r.fecha;}))].sort();
-      var shortDays=allDays.map(function(d){return d.slice(5);});
+      var shortDays=allDays.map(function(d){var p=d.split('-');return p[2]+'-'+p[1];});
 
       chartsEl.innerHTML=especies.map(function(esp,i){
         return '<div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;">'+
@@ -4926,7 +4932,7 @@ function renderReArea(area, lines, filterR){
       var prog=progMap[d]||0;
       return prog>0?parseFloat((diasProd[d].cajas/prog*100).toFixed(1)):null;
     });
-    var shortLabels=diasKeys.map(function(d){return d.slice(5);});
+    var shortLabels=diasKeys.map(function(d){var p=d.split('-');return p[2]+'-'+p[1];});
 
     dx('reChartCajas');
     CH['reChartCajas']=new Chart(document.getElementById('reChartCajas'),{
