@@ -151,7 +151,7 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
   .cw.h240{height:180px!important;}
   .cw.h220{height:170px!important;}
   .cw.h180{height:140px!important;}
-  .cw.h160{height:130px!important;}
+  .cw.h150{height:150px;}.h160{height:130px!important;}
   /* TP pareto buttons mobile */
   #tp2Par,#tp3Par{height:200px!important;}
 }
@@ -281,7 +281,7 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
   .home-cards{grid-template-columns:1fr;gap:14px;}
   .home-hero h2{font-size:24px;}
   .tbl-outer{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-  .cw{min-height:180px;}
+  .cw{min-height:0!important;}
 }
 
 @media(max-width:480px){
@@ -1046,7 +1046,7 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
 
     <!-- Cards acumulado por especie -->
     <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🍓 Acumulado por Especie</div>
-    <div id="reEspecieCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:7px;margin-bottom:12px;"></div>
+    <div id="reEspecieCards" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
 
     <!-- Charts por especie (vista diaria) -->
     <div id="reEspecieCharts" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
@@ -1066,15 +1066,15 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px;">
       <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
         <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Plan. vs No Plan.</div>
-        <div style="height:150px;"><canvas id="reDonTPZCIQ"></canvas></div>
+        <div class="cw h180"><canvas id="reDonTPZCIQ"></canvas></div>
       </div>
       <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
         <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Por Categoría</div>
-        <div style="height:150px;"><canvas id="reDonCatZCIQ"></canvas></div>
+        <div class="cw h180"><canvas id="reDonCatZCIQ"></canvas></div>
       </div>
       <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
         <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Por Línea</div>
-        <div style="height:150px;"><canvas id="reDonAreaZCIQ"></canvas></div>
+        <div class="cw h180"><canvas id="reDonAreaZCIQ"></canvas></div>
       </div>
     </div>
 
@@ -1091,7 +1091,7 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
       <button id="reParetoZCIQ_btnPlan" onclick="setRePareto('ZCIQ','plan')" class="lbtn" style="font-size:9px;padding:3px 10px;">Planificados</button>
       <button id="reParetoZCIQ_btnNoplan" onclick="setRePareto('ZCIQ','noplan')" class="lbtn" style="font-size:9px;padding:3px 10px;">No Plan.</button>
     </div>
-    <div class="cw h200"><canvas id="reParetoZCIQ"></canvas></div>
+    <div class="cw h220"><canvas id="reParetoZCIQ"></canvas></div>
   </div>
 
   <!-- ════ SECCIÓN 2: ENVASADO (ZENV) ════ -->
@@ -1110,17 +1110,17 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
 
     <!-- Charts cajas + mermas -->
     <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">📦 Cajas Producidas vs Programadas</div>
-    <div class="cw h200" style="margin-bottom:12px;"><canvas id="reChartCajas"></canvas></div>
+    <div class="cw h220" style="margin-bottom:12px;"><canvas id="reChartCajas"></canvas></div>
 
-    <!-- Mermas: stack on mobile -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:12px;">
+    <!-- Mermas: side by side, same height as cajas chart -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
       <div>
         <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:5px;">📉 Merma Cajas</div>
-        <div class="cw h160"><canvas id="reChartMermaCaj"></canvas></div>
+        <div class="cw h220"><canvas id="reChartMermaCaj"></canvas></div>
       </div>
       <div>
         <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:5px;">📉 Merma Bolsas</div>
-        <div class="cw h160"><canvas id="reChartMermaBol"></canvas></div>
+        <div class="cw h220"><canvas id="reChartMermaBol"></canvas></div>
       </div>
     </div>
 
@@ -1139,15 +1139,15 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px;">
       <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
         <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Plan. vs No Plan.</div>
-        <div style="height:150px;"><canvas id="reDonTPZENV"></canvas></div>
+        <div class="cw h180"><canvas id="reDonTPZENV"></canvas></div>
       </div>
       <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
         <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Por Categoría</div>
-        <div style="height:150px;"><canvas id="reDonCatZENV"></canvas></div>
+        <div class="cw h180"><canvas id="reDonCatZENV"></canvas></div>
       </div>
       <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
         <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Por Línea</div>
-        <div style="height:150px;"><canvas id="reDonAreaZENV"></canvas></div>
+        <div class="cw h180"><canvas id="reDonAreaZENV"></canvas></div>
       </div>
     </div>
 
@@ -1164,7 +1164,7 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
       <button id="reParetoZENV_btnPlan" onclick="setRePareto('ZENV','plan')" class="lbtn" style="font-size:9px;padding:3px 10px;">Planificados</button>
       <button id="reParetoZENV_btnNoplan" onclick="setRePareto('ZENV','noplan')" class="lbtn" style="font-size:9px;padding:3px 10px;">No Plan.</button>
     </div>
-    <div class="cw h200"><canvas id="reParetoZENV"></canvas></div>
+    <div class="cw h220"><canvas id="reParetoZENV"></canvas></div>
   </div>
 
 </div>
@@ -4821,20 +4821,19 @@ function renderReArea(area, lines, filterR){
         var rendColor=rend>=85?CC.grn:rend>=75?CC.amb:CC.red;
         var col=ESP_COLORS[i%ESP_COLORS.length];
         var icon=ESP_ICONS[esp]||ESP_ICONS.DEFAULT;
-        return '<div style="background:rgba(15,25,50,.8);border:1px solid rgba(255,255,255,.08);border-left:3px solid '+col+';border-radius:10px;padding:12px 14px;min-width:160px;flex:1;">'+
-          '<div style="font-size:10px;font-weight:700;color:'+col+';margin-bottom:6px;">'+icon+' '+esp+'</div>'+
-          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">'+
-            '<div>'+
-              '<div style="font-size:8px;color:var(--mut);text-transform:uppercase;">Kg Ing.</div>'+
-              '<div style="font-size:14px;font-weight:800;color:'+col+';">'+fmtK(d.kg)+'</div>'+
+        return '<div style="background:rgba(15,25,50,.8);border:1px solid rgba(255,255,255,.08);border-left:4px solid '+col+';border-radius:10px;padding:10px 12px;">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'+
+            '<div style="font-size:11px;font-weight:700;color:'+col+';">'+icon+' '+esp+'</div>'+
+            '<div style="font-size:13px;font-weight:800;color:'+rendColor+';background:rgba(255,255,255,.06);padding:2px 10px;border-radius:6px;">'+rend.toFixed(1)+'%</div>'+
+          '</div>'+
+          '<div style="display:flex;gap:8px;">'+
+            '<div style="flex:1;background:rgba(255,255,255,.04);border-radius:7px;padding:7px 10px;">'+
+              '<div style="font-size:7px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Kg Ingresados</div>'+
+              '<div style="font-size:16px;font-weight:800;color:'+col+';line-height:1;">'+fmtK(d.kg)+'</div>'+
             '</div>'+
-            '<div>'+
-              '<div style="font-size:8px;color:var(--mut);text-transform:uppercase;">IQF Ap.</div>'+
-              '<div style="font-size:14px;font-weight:800;color:'+col+';">'+fmtK(d.iqf)+'</div>'+
-            '</div>'+
-            '<div>'+
-              '<div style="font-size:8px;color:var(--mut);text-transform:uppercase;">Rend.</div>'+
-              '<div style="font-size:14px;font-weight:800;color:'+rendColor+';">'+rend.toFixed(1)+'%</div>'+
+            '<div style="flex:1;background:rgba(255,255,255,.04);border-radius:7px;padding:7px 10px;">'+
+              '<div style="font-size:7px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">IQF Aprobado</div>'+
+              '<div style="font-size:16px;font-weight:800;color:var(--grn);line-height:1;">'+fmtK(d.iqf)+'</div>'+
             '</div>'+
           '</div>'+
         '</div>';
@@ -4856,7 +4855,7 @@ function renderReArea(area, lines, filterR){
       chartsEl.innerHTML=especies.map(function(esp,i){
         return '<div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:12px;">'+
           '<div style="font-size:10px;font-weight:700;color:'+ESP_COLORS[i%ESP_COLORS.length]+';margin-bottom:8px;">'+(ESP_ICONS[esp]||'🍏')+' '+esp+' — Por Día</div>'+
-          '<div style="height:160px;"><canvas id="reChartEsp_'+i+'"></canvas></div>'+
+          '<div style="height:160px;position:relative;"><canvas id="reChartEsp_'+i+'"></canvas></div>'+
         '</div>';
       }).join('');
 
