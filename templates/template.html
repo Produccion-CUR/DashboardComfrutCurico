@@ -4465,8 +4465,8 @@ function renderReArea(area, lines, filterR){
       var rend=kgIn>0?(iqf/kgIn*100):0;
       var rendColor=rend>=85?CC.grn:rend>=75?CC.amb:CC.red;
       kpiH+=
-        '<div class="kpi kb"><div class="klbl">Kg Ingresados</div><div class="kval">'+fmt(kgIn)+'</div><div class="ksub">materia prima</div></div>'+
-        '<div class="kpi kb"><div class="klbl">IQF Aprobado</div><div class="kval">'+fmt(iqf)+'</div><div class="ksub">kg aprobados</div></div>'+
+        '<div class="kpi kb"><div class="klbl">Kgs Ingresados</div><div class="kval">'+fmt(kgIn)+'</div><div class="ksub">materia prima</div></div>'+
+        '<div class="kpi kb"><div class="klbl">Kgs IQF Aprobado</div><div class="kval">'+fmt(iqf)+'</div><div class="ksub">kg aprobados</div></div>'+
         '<div class="kpi" style="border-top-color:'+rendColor+'"><div class="klbl">Rendimiento IQF</div><div class="kval" style="color:'+rendColor+'">'+rend.toFixed(1)+'%</div><div class="ksub">meta ≥85%</div></div>';
     } else {
       var cajas=prod.reduce(function(a,r){return a+r.cajas;},0);
@@ -4803,9 +4803,12 @@ function renderReArea(area, lines, filterR){
     var espMap={};
     prod.forEach(function(r){
       var esp=r.especie||'SIN ESPECIE';
-      if(!espMap[esp])espMap[esp]={kg:0,iqf:0,byDay:{}};
+      if(!espMap[esp])espMap[esp]={kg:0,iqf:0,puro:0,jugo:0,crumble:0,byDay:{}};
       espMap[esp].kg+=r.kg_ingresados;
       espMap[esp].iqf+=r.iqf_aprobado;
+      espMap[esp].puro+=(r.kg_puro||0);
+      espMap[esp].jugo+=(r.kg_jugo||0);
+      espMap[esp].crumble+=(r.kg_crumble||0);
       if(!espMap[esp].byDay[r.fecha])espMap[esp].byDay[r.fecha]={kg:0,iqf:0};
       espMap[esp].byDay[r.fecha].kg+=r.kg_ingresados;
       espMap[esp].byDay[r.fecha].iqf+=r.iqf_aprobado;
@@ -4828,14 +4831,21 @@ function renderReArea(area, lines, filterR){
           '</div>'+
           '<div style="display:flex;gap:8px;">'+
             '<div style="flex:1;background:rgba(255,255,255,.04);border-radius:7px;padding:7px 10px;">'+
-              '<div style="font-size:7px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Kg Ingresados</div>'+
-              '<div style="font-size:16px;font-weight:800;color:'+col+';line-height:1;">'+fmtK(d.kg)+'</div>'+
+              '<div style="font-size:7px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Kgs Ingresados</div>'+
+              '<div style="font-size:16px;font-weight:800;color:'+col+';line-height:1;">'+fmtK(d.kg)+'<span style=\'font-size:8px;color:var(--mut);margin-left:2px;\'>kgs</span></div>'+
             '</div>'+
             '<div style="flex:1;background:rgba(255,255,255,.04);border-radius:7px;padding:7px 10px;">'+
-              '<div style="font-size:7px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">IQF Aprobado</div>'+
-              '<div style="font-size:16px;font-weight:800;color:var(--grn);line-height:1;">'+fmtK(d.iqf)+'</div>'+
+              '<div style="font-size:7px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Kgs IQF Aprobado</div>'+
+              '<div style="font-size:16px;font-weight:800;color:var(--grn);line-height:1;">'+fmtK(d.iqf)+'<span style=\'font-size:8px;color:var(--mut);margin-left:2px;\'>kgs</span></div>'+
             '</div>'+
           '</div>'+
+          (d.puro+d.jugo+d.crumble>0?
+            '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">'+
+              (d.puro>0?'<div style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);border-radius:6px;padding:3px 8px;font-size:9px;"><span style="color:var(--mut);">Puré </span><span style="font-weight:700;color:#c084fc;">'+fmtK(d.puro)+' kgs</span></div>':'')+
+              (d.jugo>0?'<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:3px 8px;font-size:9px;"><span style="color:var(--mut);">Jugo </span><span style="font-weight:700;color:#fcd34d;">'+fmtK(d.jugo)+' kgs</span></div>':'')+
+              (d.crumble>0?'<div style="background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);border-radius:6px;padding:3px 8px;font-size:9px;"><span style="color:var(--mut);">Crumble </span><span style="font-weight:700;color:#fde047;">'+fmtK(d.crumble)+' kgs</span></div>':'')+
+            '</div>'
+          :'')+
         '</div>';
       }).join('');
     }
