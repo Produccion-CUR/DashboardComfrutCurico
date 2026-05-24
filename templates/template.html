@@ -554,6 +554,7 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
       <button class="tab" id="tbtp3"  onclick="goTo('tp3',this)"><span class="tab-icon">⏱️</span><span class="tab-txt"> TP Env.</span></button>
       <button class="tab" id="tbre"   onclick="goTo('re',this)"><span class="tab-icon">📋</span><span class="tab-txt"> Resumen</span></button>
       <button class="tab" id="tbcost" onclick="goTo('cost',this)"><span class="tab-icon">💰</span><span class="tab-txt"> Costos</span></button>
+      <button class="tab" id="tbseg" onclick="goTo('seg',this)"><span class="tab-icon">🦺</span><span class="tab-txt"></span></button>
     </div>
   </div>
 </nav>
@@ -671,6 +672,50 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
       <div class="fg" style="display:flex;align-items:flex-end;"><button class="rbtn" onclick="clearRE()">↺ Limpiar</button></div>
     </div>
   </div>
+
+
+<div class="fbar-sticky" id="fbarStickySeg">
+    <div class="fbar-toggle" onclick="tfbar('seg')">
+      <div class="fbar-left">
+        <div class="fbar-dot" style="background:#f59e0b"></div>
+        <span class="ftlbl">🦺 Seguridad — Filtros</span>
+        <div class="ft-pills" id="pillsSeg"></div>
+      </div>
+      <span class="farrow open" id="farr_seg">▼</span>
+    </div>
+    <div class="fbar-inner exp" id="fi_seg">
+      <div class="fg"><div class="fl">Mes</div><select id="segM" onchange="updateSeg()"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">Semana</div><select id="segS" onchange="updateSeg()"><option value="">Todas</option></select></div>
+      <div class="fg"><div class="fl">Turno</div><select id="segT" onchange="updateSeg()"><option value="">Todos</option><option value="T1">T1</option><option value="T2">T2</option><option value="T3">T3</option></select></div>
+      <div class="fg"><div class="fl">Línea</div><select id="segL" onchange="updateSeg()"><option value="">Todas</option></select></div>
+      <div class="fg"><div class="fl">Supervisor</div><select id="segSup" onchange="updateSeg()"><option value="">Todos</option></select></div>
+      <div class="fg"><div class="fl">DIAT</div><select id="segDiat" onchange="updateSeg()"><option value="">Todos</option><option value="CT">CT - Con Tiempo Perdido</option><option value="ST">ST - Sin Tiempo Perdido</option><option value="EI">EI - Enf. Incapacitante</option></select></div>
+      <button class="rbtn" onclick="resetSeg()">↺ Limpiar</button>
+    </div>
+  </div>
+
+<!-- ═══ SEGURIDAD ═══ -->
+<div class="scr" id="seg">
+  <div class="slbl" style="margin-top:14px;">KPIs — Seguridad</div>
+  <div class="krow" id="segKpis"></div>
+
+  <div class="slbl">Accidentes por Semana</div>
+  <div class="gc" style="margin-bottom:12px;">
+    <div class="cw h200"><canvas id="segSemChart"></canvas></div>
+  </div>
+
+  <div class="slbl">Distribución por Línea y Turno</div>
+  <div class="gcr" style="margin-bottom:12px;">
+    <div class="gc"><div class="cw h180"><canvas id="segLineaChart"></canvas></div></div>
+    <div class="gc"><div class="cw h180"><canvas id="segTurnoChart"></canvas></div></div>
+  </div>
+
+  <div class="slbl">Top Causas — Acción / Condición Sub Estándar</div>
+  <div class="cw h180" style="margin-bottom:12px;"><canvas id="segCausaChart"></canvas></div>
+
+  <div class="slbl">Registro de Incidentes</div>
+  <div id="segTabla" style="overflow-x:auto;margin-bottom:20px;"></div>
+</div>
 
 <!-- ═══ HOME ═══ -->
 <div class="scr on" id="s0">
@@ -1062,19 +1107,22 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
     <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🚦 Disponibilidad por Línea</div>
     <div id="reSemaforoZCIQ" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:7px;margin-bottom:12px;"></div>
 
-    <!-- Donuts TP: stack 1 col on mobile, 3 on desktop -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px;">
-      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
-        <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Plan. vs No Plan.</div>
-        <div class="cw h180"><canvas id="reDonTPZCIQ"></canvas></div>
+    <!-- Donuts TP: full-width cards stacked -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px;">
+      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">🥧 Planificado vs No Planificado — ZCIQ</div>
+        <div style="height:260px;position:relative;overflow:visible;"><canvas id="reDonTPZCIQ"></canvas></div>
+        <div id="reObsTP1ZCIQ" style="font-size:10px;color:var(--mut);margin-top:10px;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:6px;border-left:2px solid var(--acc);"></div>
       </div>
-      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
-        <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Por Categoría</div>
-        <div class="cw h180"><canvas id="reDonCatZCIQ"></canvas></div>
+      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">🥧 Por Categoría de Paro — ZCIQ</div>
+        <div style="height:260px;position:relative;overflow:visible;"><canvas id="reDonCatZCIQ"></canvas></div>
+        <div id="reObsCat1ZCIQ" style="font-size:10px;color:var(--mut);margin-top:10px;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:6px;border-left:2px solid var(--acc);"></div>
       </div>
-      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
-        <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Por Línea</div>
-        <div class="cw h180"><canvas id="reDonAreaZCIQ"></canvas></div>
+      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">🥧 Por Línea — ZCIQ</div>
+        <div style="height:260px;position:relative;overflow:visible;"><canvas id="reDonAreaZCIQ"></canvas></div>
+        <div id="reObsArea1ZCIQ" style="font-size:10px;color:var(--mut);margin-top:10px;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:6px;border-left:2px solid var(--acc);"></div>
       </div>
     </div>
 
@@ -1136,22 +1184,23 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
     <div id="reSemaforoZENV" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:7px;margin-bottom:12px;"></div>
 
     <!-- Donuts TP -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px;">
-      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
-        <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Plan. vs No Plan.</div>
-        <div class="cw h180"><canvas id="reDonTPZENV"></canvas></div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px;">
+      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">🥧 Planificado vs No Planificado — ZENV</div>
+        <div style="height:260px;position:relative;overflow:visible;"><canvas id="reDonTPZENV"></canvas></div>
+        <div id="reObsTP1ZENV" style="font-size:10px;color:var(--mut);margin-top:10px;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:6px;border-left:2px solid var(--acc);"></div>
       </div>
-      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
-        <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Por Categoría</div>
-        <div class="cw h180"><canvas id="reDonCatZENV"></canvas></div>
+      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">🥧 Por Categoría de Paro — ZENV</div>
+        <div style="height:260px;position:relative;overflow:visible;"><canvas id="reDonCatZENV"></canvas></div>
+        <div id="reObsCat1ZENV" style="font-size:10px;color:var(--mut);margin-top:10px;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:6px;border-left:2px solid var(--acc);"></div>
       </div>
-      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;">
-        <div style="font-size:8px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:6px;">🥧 Por Línea</div>
-        <div class="cw h180"><canvas id="reDonAreaZENV"></canvas></div>
+      <div style="background:rgba(15,25,50,.5);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:700;color:var(--txt);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">🥧 Por Línea — ZENV</div>
+        <div style="height:260px;position:relative;overflow:visible;"><canvas id="reDonAreaZENV"></canvas></div>
+        <div id="reObsArea1ZENV" style="font-size:10px;color:var(--mut);margin-top:10px;line-height:1.5;padding:8px 10px;background:rgba(255,255,255,.04);border-radius:6px;border-left:2px solid var(--acc);"></div>
       </div>
-    </div>
-
-    <!-- Tarjetas TP: 1 col -->
+    </div  <!-- Tarjetas TP: 1 col -->
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
       <div id="reTPPlanZENV" style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:10px;padding:12px;"></div>
       <div id="reTPNoplanZENV" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px;"></div>
@@ -1253,9 +1302,12 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
 <script>
 // Embedded data (replaced by build script)
 const _PROD_RAW = (function(){ try{ return /*PROD_DATA*/; }catch(e){ return null; } })();
+const _SEG_RAW  = (function(){ try{ return /*SEG_DATA*/;  }catch(e){ return null; } })();
 const _PIDX_RAW = (function(){ try{ return /*PIDX_DATA*/; }catch(e){ return null; } })();
 const _PROG_RAW = (function(){ try{ return /*PROG_DATA*/; }catch(e){ return null; } })();
 const PROD_E = _PROD_RAW || [];
+const SEG_E  = _SEG_RAW  || [];
+let   SEG    = [...SEG_E];
 let   PIDX   = _PIDX_RAW || {};
 const PROG_E = _PROG_RAW || [];
 let PROD=[...PROD_E];
@@ -1289,7 +1341,7 @@ function goTo(id,btn){
   document.querySelectorAll('.tab').forEach(function(tb){ tb.classList.remove('on'); });
   document.querySelectorAll('.fbar-sticky').forEach(function(f){ f.classList.remove('active'); });
   var scr=el(id); if(scr) scr.classList.add('on');
-  var fbarMap={s2:'fbarSticky2',s3:'fbarSticky3',tp2:'fbarStickyTP2',tp3:'fbarStickyTP3',re:'fbarStickyRE'};
+  var fbarMap={s2:'fbarSticky2',s3:'fbarSticky3',tp2:'fbarStickyTP2',tp3:'fbarStickyTP3',re:'fbarStickyRE',seg:'fbarStickySeg'};
   var fbarId=fbarMap[id];
   if(fbarId){
     var fb=el(fbarId);
@@ -1297,8 +1349,8 @@ function goTo(id,btn){
       fb.classList.add('active');
     }
   }
-  var tabId={s0:'tb0',s2:'tb2',s3:'tb3',tp2:'tbtp2',tp3:'tbtp3'}[id];
-  ['tb0','tb2','tb3','tbtp2','tbtp3'].forEach(function(tid){var tb=el(tid);if(tb)tb.classList.remove('on');});
+  var tabId={s0:'tb0',s2:'tb2',s3:'tb3',tp2:'tbtp2',tp3:'tbtp3',seg:'tbseg'}[id];
+  ['tb0','tb2','tb3','tbtp2','tbtp3','tbseg'].forEach(function(tid){var tb=el(tid);if(tb)tb.classList.remove('on');});
   var tab=el(tabId); if(tab) tab.classList.add('on');
   setTimeout(function(){
     if(id==='s2')  updateArea('s2');
@@ -1308,6 +1360,7 @@ function goTo(id,btn){
     if(id==='s0')  updateHomeKpis();
     if(id==='re')  updateResumen();
     if(id==='cost') updateCostos();
+    if(id==='seg')  updateSeg();
   },80);
 }
 
@@ -1400,7 +1453,7 @@ function cascSD(pfx,sdKey){
 /* STICKY FBAR */
 function tfbar(pfx){
   // Support both short (s2→'2') and full (tp2→'_tp2') prefix IDs
-  var sfx = pfx==='tp2'?'_tp2':pfx==='tp3'?'_tp3':pfx.slice(-1);
+  var sfx = pfx==='tp2'?'_tp2':pfx==='tp3'?'_tp3':pfx==='seg'?'_seg':pfx.slice(-1);
   var inner=el('fi'+sfx), arrow=el('farr'+sfx);
   if(!inner||!arrow)return;
   var open=inner.classList.contains('exp');
@@ -2680,13 +2733,14 @@ el('fi').addEventListener('change', function(e){
       });
 
       // ── Refresh filter dropdowns ──────────────────────────────────────
-      try{popArea('s2','ZCIQ',ZCIQ_L);}catch(e){}
+      try{popArea('s2','ZCIQ',ZCIQ_L);
+popSeg();}catch(e){}
       try{popArea('s3','ZENV',ZENV_L);}catch(e){}
       try{popAreaTP('tp2','ZCIQ');}catch(e){}
       try{popAreaTP('tp3','ZENV');}catch(e){}
 
       // ── Refresh whichever screen is currently visible ─────────────────
-      var active = ['s0','s2','s3','tp2','tp3','re','cost'].find(function(id){
+      var active = ['s0','s2','s3','tp2','tp3','re','cost','seg'].find(function(id){
         var el2=el(id); return el2 && el2.classList.contains('on');
       });
       // Always clear caches so fresh data is used
@@ -4723,12 +4777,12 @@ function renderReArea(area, lines, filterR){
             backgroundColor:[CC.grn+'cc',CC.red+'cc'],
             borderColor:[CC.grn,CC.red],borderWidth:2}]
         },
-        options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+        options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
           plugins:{
-            legend:{display:true,position:'bottom',labels:{color:'rgba(255,255,255,.8)',font:{size:8},padding:6,boxWidth:10}},
-            tooltip:{callbacks:{label:function(ctx){
+            legend:{display:true,position:'right',labels:{color:'rgba(255,255,255,.85)',font:{size:10},padding:10,boxWidth:12}},
+            tooltip:{mode:'nearest',intersect:true,callbacks:{label:function(ctx){
               var total=ctx.dataset.data.reduce(function(a,b){return a+b;},0);
-              return ctx.label+': '+fmt(ctx.raw)+' min ('+( total>0?(ctx.raw/total*100).toFixed(1):0)+'%)';
+              return ' '+ctx.label+': '+fmt(ctx.raw)+' min ('+( total>0?(ctx.raw/total*100).toFixed(1):0)+'%)';
             }}}
           }
         }
@@ -4748,12 +4802,12 @@ function renderReArea(area, lines, filterR){
       CH[donId2]=new Chart(el2,{
         type:'doughnut',
         data:{labels:catLabels,datasets:[{data:catVals,backgroundColor:catBg,borderColor:catBd,borderWidth:2}]},
-        options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+        options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
           plugins:{
-            legend:{display:true,position:'bottom',labels:{color:'rgba(255,255,255,.8)',font:{size:8},padding:4,boxWidth:8}},
-            tooltip:{callbacks:{label:function(ctx){
+            legend:{display:true,position:'right',labels:{color:'rgba(255,255,255,.85)',font:{size:10},padding:10,boxWidth:12}},
+            tooltip:{mode:'nearest',intersect:true,callbacks:{label:function(ctx){
               var total=ctx.dataset.data.reduce(function(a,b){return a+b;},0);
-              return ctx.label+': '+fmt(ctx.raw)+' min ('+(total>0?(ctx.raw/total*100).toFixed(1):0)+'%)';
+              return ' '+ctx.label+': '+fmt(ctx.raw)+' min ('+(total>0?(ctx.raw/total*100).toFixed(1):0)+'%)';
             }}}
           }
         }
@@ -4778,17 +4832,87 @@ function renderReArea(area, lines, filterR){
           backgroundColor:lineaLabels.map(function(_,i){return LINE_COLORS[i%LINE_COLORS.length]+'cc';}),
           borderColor:lineaLabels.map(function(_,i){return LINE_COLORS[i%LINE_COLORS.length];}),
           borderWidth:2}]},
-        options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+        options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
           plugins:{
-            legend:{display:true,position:'bottom',labels:{color:'rgba(255,255,255,.8)',font:{size:8},padding:4,boxWidth:8}},
-            tooltip:{callbacks:{label:function(ctx){
+            legend:{display:true,position:'right',labels:{color:'rgba(255,255,255,.85)',font:{size:10},padding:10,boxWidth:12}},
+            tooltip:{mode:'nearest',intersect:true,callbacks:{label:function(ctx){
               var total=ctx.dataset.data.reduce(function(a,b){return a+b;},0);
-              return ctx.label+': '+fmt(ctx.raw)+' min ('+(total>0?(ctx.raw/total*100).toFixed(1):0)+'%)';
+              return ' '+ctx.label+': '+fmt(ctx.raw)+' min ('+(total>0?(ctx.raw/total*100).toFixed(1):0)+'%)';
             }}}
           }
         }
       });
     }
+    // ── Observaciones / Análisis ─────────────────────────────────────────
+    (function(){
+      var totMin=tPlan+tNoplan;
+      var pctPlan  =totMin>0?(tPlan/totMin*100).toFixed(1):0;
+      var pctNoPlan=totMin>0?(tNoplan/totMin*100).toFixed(1):0;
+
+      // Helper: clasifica una falla como Plan / No Plan según el tipo_paro predominante
+      function tipoParo(falla, subpd){
+        var mPlan=0, mNoPlan=0;
+        subpd.forEach(function(r){
+          if(r.falla!==falla) return;
+          if(r.tipo_paro==='Paro Planificado') mPlan+=r.minutos;
+          else mNoPlan+=r.minutos;
+        });
+        if(mPlan===0&&mNoPlan===0) return '';
+        return mPlan>=mNoPlan
+          ? '<span style="color:var(--grn);font-size:9px"> ✅P</span>'
+          : '<span style="color:var(--red);font-size:9px"> ⚡NP</span>';
+      }
+
+      // Helper: genera string de Top 3 causas con tipo de paro
+      function top3Str(subpd, label){
+        var fallaMap={};
+        subpd.forEach(function(r){if(r.falla)fallaMap[r.falla]=(fallaMap[r.falla]||0)+r.minutos;});
+        var top3=Object.keys(fallaMap).sort(function(a,b){return fallaMap[b]-fallaMap[a];}).slice(0,3);
+        if(!top3.length) return '';
+        return ' &nbsp;🔴 <strong>Top 3'+( label?' en '+label:'')+': </strong>'+
+          top3.map(function(c,i){
+            return (i+1)+'. '+c+tipoParo(c,subpd)+
+              ' (<strong>'+fmt(Math.round(fallaMap[c]))+' min</strong>)';
+          }).join(' &nbsp;·&nbsp; ');
+      }
+
+      // obs1: Plan vs NoPlan — top 3 causas globales
+      var obs1=document.getElementById('reObsTP1'+area);
+      if(obs1){
+        var domLabel=tPlan>=tNoplan?'planificados':'no planificados';
+        var domPct  =tPlan>=tNoplan?pctPlan:pctNoPlan;
+        obs1.innerHTML='💡 El <strong>'+domPct+'%</strong> del tiempo perdido corresponde a paros <strong>'+
+          domLabel+'</strong> · Total: <strong>'+fmt(Math.round(totMin))+'</strong> min'+
+          (tNoplan>tPlan?' — Revisar causas recurrentes no planificadas.':
+           ' — Mantención planificada es el principal factor.')+top3Str(pd,'');
+      }
+
+      // obs2: Por Categoría — top 3 causas dentro de la categoría dominante
+      var catTotal=catVals?catVals.reduce(function(a,b){return a+b;},0):0;
+      var obs2=document.getElementById('reObsCat1'+area);
+      if(obs2&&catLabels&&catLabels.length){
+        var pct0=catTotal>0?(catVals[0]/catTotal*100).toFixed(1):0;
+        var topCat=catLabels[0];
+        var pdCat=pd.filter(function(r){return r.categoria===topCat;});
+        obs2.innerHTML='💡 Categoría principal: <strong>'+topCat+'</strong> · '+
+          '<strong>'+fmt(catVals[0])+'</strong> min (<strong>'+pct0+'%</strong>)'+
+          (catLabels.length>1?' &nbsp;·&nbsp; 2ª: <strong>'+catLabels[1]+'</strong> '+fmt(catVals[1])+' min':'')+
+          '.'+top3Str(pdCat,topCat);
+      }
+
+      // obs3: Por Línea — top 3 causas dentro de la línea dominante
+      var obs3=document.getElementById('reObsArea1'+area);
+      if(obs3&&lineaLabels&&lineaLabels.length){
+        var linTotal=lineaVals.reduce(function(a,b){return a+b;},0);
+        var pctTop=linTotal>0?(lineaVals[0]/linTotal*100).toFixed(1):0;
+        var topLinea=lineaLabels[0];
+        var pdLin=pd.filter(function(r){return (LMAP[r.linea]||r.linea)===topLinea;});
+        obs3.innerHTML='💡 Línea crítica: <strong>'+topLinea+'</strong> · '+
+          '<strong>'+fmt(lineaVals[0])+'</strong> min (<strong>'+pctTop+'%</strong>)'+
+          (lineaLabels.length>1?' &nbsp;·&nbsp; '+lineaLabels.length+' líneas · <strong>'+fmt(linTotal)+'</strong> min totales':'')+
+          '.'+top3Str(pdLin,topLinea);
+      }
+    })();
   })();
 
   buildTPCard(document.getElementById('reTPPlan'+area), plan, tPlan, true);
@@ -5290,6 +5414,162 @@ function setCascFilter(btn){
   });
   // Re-render cascade
   buildCasc(id1, id2, filtered, td);
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   SEGURIDAD
+══════════════════════════════════════════════════════════════ */
+function popSeg(){
+  var meses=[...new Set(SEG.map(function(r){return r.mes;}))].sort(function(a,b){return a-b;});
+  var sems =[...new Set(SEG.map(function(r){return r.semana;}))].sort(function(a,b){return a-b;});
+  var lineas=[...new Set(SEG.map(function(r){return r.linea;}))].filter(Boolean).sort();
+  var sups  =[...new Set(SEG.map(function(r){return r.supervisor;}))].filter(Boolean).sort();
+  var mesEl=el('segM'),semEl=el('segS'),linEl=el('segL'),supEl=el('segSup');
+  var mNames=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  if(mesEl) mesEl.innerHTML='<option value="">Todos</option>'+meses.map(function(m){return'<option value="'+m+'">'+mNames[m]+'</option>';}).join('');
+  if(semEl) semEl.innerHTML='<option value="">Todas</option>'+sems.map(function(s){return'<option value="'+s+'">Sem '+s+'</option>';}).join('');
+  if(linEl) linEl.innerHTML='<option value="">Todas</option>'+lineas.map(function(l){return'<option value="'+l+'">'+l+'</option>';}).join('');
+  if(supEl) supEl.innerHTML='<option value="">Todos</option>'+sups.map(function(s){return'<option value="'+s+'">'+s+'</option>';}).join('');
+}
+
+function resetSeg(){
+  ['segM','segS','segT','segL','segSup','segDiat'].forEach(function(id){var e=el(id);if(e)e.value='';});
+  updateSeg();
+}
+
+function updateSeg(){
+  if(!SEG||!SEG.length)return;
+  var mes=sv('segM'),sem=sv('segS'),tur=sv('segT'),lin=sv('segL'),sup=sv('segSup'),diat=sv('segDiat');
+  var pd=SEG.filter(function(r){
+    if(mes  && String(r.mes)!==mes)  return false;
+    if(sem  && String(r.semana)!==sem) return false;
+    if(tur  && r.turno!==tur)   return false;
+    if(lin  && r.linea!==lin)   return false;
+    if(sup  && r.supervisor!==sup) return false;
+    if(diat && r.diat!==diat)   return false;
+    return true;
+  });
+
+  var total   = pd.length;
+  var conDiat = pd.filter(function(r){return r.diat;}).length;
+  var ct      = pd.filter(function(r){return r.diat==='CT';}).length;
+  var st      = pd.filter(function(r){return r.diat==='ST';}).length;
+  var ei      = pd.filter(function(r){return r.diat==='EI';}).length;
+  var sinDiat = total - conDiat;
+
+  // KPIs
+  var kEl=el('segKpis');
+  if(kEl) kEl.innerHTML=
+    '<div class="kpi kb"><div class="klbl">Total Registros</div><div class="kval">'+total+'</div><div class="ksub">incidentes + accidentes</div></div>'+
+    '<div class="kpi kb"><div class="klbl">Con DIAT</div><div class="kval" style="color:var(--red)">'+conDiat+'</div><div class="ksub">accidentes formales</div></div>'+
+    '<div class="kpi kb"><div class="klbl">CT</div><div class="kval" style="color:var(--red)">'+ct+'</div><div class="ksub">con tiempo perdido</div></div>'+
+    '<div class="kpi kb"><div class="klbl">ST</div><div class="kval" style="color:var(--amb)">'+st+'</div><div class="ksub">sin tiempo perdido</div></div>'+
+    '<div class="kpi kb"><div class="klbl">Incidentes</div><div class="kval" style="color:var(--grn)">'+sinDiat+'</div><div class="ksub">sin DIAT</div></div>';
+
+  // Chart 1: Accidentes por semana
+  var bySem={};
+  pd.forEach(function(r){
+    var s=r.semana;
+    if(!bySem[s])bySem[s]={total:0,ct:0,st:0,ei:0,inc:0};
+    bySem[s].total++;
+    if(r.diat==='CT') bySem[s].ct++;
+    else if(r.diat==='ST') bySem[s].st++;
+    else if(r.diat==='EI') bySem[s].ei++;
+    else bySem[s].inc++;
+  });
+  var semKeys=Object.keys(bySem).map(Number).sort(function(a,b){return a-b;});
+  var semLabels=semKeys.map(function(s){return'Sem '+s;});
+  mkBar('segSemChart',{
+    labels:semLabels,
+    datasets:[
+      {label:'CT',data:semKeys.map(function(s){return bySem[s].ct;}),backgroundColor:'rgba(239,68,68,.8)',borderRadius:3},
+      {label:'ST',data:semKeys.map(function(s){return bySem[s].st;}),backgroundColor:'rgba(245,158,11,.8)',borderRadius:3},
+      {label:'Incidente',data:semKeys.map(function(s){return bySem[s].inc;}),backgroundColor:'rgba(6,182,212,.6)',borderRadius:3}
+    ]
+  },{stacked:true,title:'Registros por Semana'});
+
+  // Chart 2: Por línea (horizontal bar)
+  var byLinea={};
+  pd.forEach(function(r){if(r.linea)byLinea[r.linea]=(byLinea[r.linea]||0)+1;});
+  var linKeys=Object.keys(byLinea).sort(function(a,b){return byLinea[b]-byLinea[a];});
+  mkBar('segLineaChart',{
+    labels:linKeys,
+    datasets:[{label:'Registros',data:linKeys.map(function(l){return byLinea[l];}),
+      backgroundColor:'rgba(168,85,247,.7)',borderRadius:3}]
+  },{indexAxis:'y',title:'Por Línea'});
+
+  // Chart 3: Por turno
+  var byTurno={T1:0,T2:0,T3:0};
+  pd.forEach(function(r){if(byTurno[r.turno]!==undefined)byTurno[r.turno]++;});
+  mkDon('segTurnoChart',['T1','T2','T3'],
+    [byTurno.T1,byTurno.T2,byTurno.T3],
+    ['rgba(6,182,212,.8)','rgba(34,197,94,.8)','rgba(245,158,11,.8)'],'Por Turno');
+
+  // Chart 4: Top causas
+  var byCausa={};
+  pd.forEach(function(r){if(r.accion)byCausa[r.accion]=(byCausa[r.accion]||0)+1;});
+  var causaKeys=Object.keys(byCausa).sort(function(a,b){return byCausa[b]-byCausa[a];}).slice(0,8);
+  mkBar('segCausaChart',{
+    labels:causaKeys.map(function(c){return c.length>30?c.slice(0,28)+'…':c;}),
+    datasets:[{label:'Casos',data:causaKeys.map(function(c){return byCausa[c];}),
+      backgroundColor:'rgba(239,68,68,.7)',borderRadius:3}]
+  },{indexAxis:'y',title:'Top Causas'});
+
+  // Table
+  var tEl=el('segTabla');
+  if(tEl){
+    var rows=pd.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+    tEl.innerHTML='<table><thead><tr>'+
+      '<th>Fecha</th><th>Sem</th><th>Turno</th><th>Supervisor</th><th>Línea</th>'+
+      '<th>Trabajador</th><th>Lesión/Situación</th><th>Causa</th><th>DIAT</th></tr></thead><tbody>'+
+      rows.map(function(r){
+        var dc=r.diat==='CT'?'var(--red)':r.diat==='ST'?'var(--amb)':r.diat==='EI'?'var(--pur)':'var(--grn)';
+        var dl=r.diat||'Inc';
+        return'<tr>'+
+          '<td style="white-space:nowrap">'+r.fecha+'</td>'+
+          '<td style="text-align:center">'+r.semana+'</td>'+
+          '<td style="text-align:center">'+r.turno+'</td>'+
+          '<td style="font-size:10px">'+r.supervisor+'</td>'+
+          '<td style="font-size:10px">'+r.linea+'</td>'+
+          '<td style="font-size:10px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r.nombre+'">'+r.nombre+'</td>'+
+          '<td style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r.lesion+'">'+r.lesion+'</td>'+
+          '<td style="font-size:10px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r.accion+'">'+r.accion+'</td>'+
+          '<td><span style="font-weight:700;color:'+dc+'">'+dl+'</span></td>'+
+        '</tr>';
+      }).join('')+'</tbody></table>';
+  }
+}
+
+function mkBar(id, data, opts){
+  if(CH[id]){try{CH[id].destroy();}catch(e){}} 
+  var ctx=el(id); if(!ctx)return;
+  CH[id]=new Chart(ctx,{
+    type:'bar',
+    data:data,
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      indexAxis: opts.indexAxis||'x',
+      plugins:{legend:{display:data.datasets.length>1,labels:{boxWidth:10,font:{size:9}}},
+        title:{display:!!opts.title,text:opts.title,font:{size:10},color:C.txt}},
+      scales:{
+        x:{stacked:!!opts.stacked,grid:{color:C.grid},ticks:{font:{size:8},color:C.txt,maxRotation:45}},
+        y:{stacked:!!opts.stacked,grid:{color:C.grid},ticks:{font:{size:8},color:C.txt},beginAtZero:true}
+      }
+    }
+  });
+}
+
+function mkDon(id, labels, data, colors, title){
+  if(CH[id]){try{CH[id].destroy();}catch(e){}}
+  var ctx=el(id); if(!ctx)return;
+  CH[id]=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:labels,datasets:[{data:data,backgroundColor:colors,borderWidth:1}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}},
+        title:{display:!!title,text:title,font:{size:10},color:C.txt}}}
+  });
 }
 
 /* INIT */
