@@ -703,7 +703,7 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
         <div class="home-card-title">Envasado (ZENV)</div>
         <div class="home-card-desc">Cajas producidas vs programadas · BPM · Mermas de cajas y bolsas · Cumplimiento del programa por SKU</div>
         <div class="home-kpi-row">
-          <div class="home-kpi">Ton. Reales<br><span id="hTon">—</span></div>
+          <div class="home-kpi">Cajas Prod.<br><span id="hTon">—</span></div>
           <div class="home-kpi">Cumplimiento<br><span id="hCump">—</span></div>
           <div class="home-kpi">SKUs<br><span id="hSku">—</span></div>
         </div>
@@ -1275,7 +1275,8 @@ Chart.defaults.color='rgba(200,215,255,0.75)';
 const fmt=n=>n==null?'—':Math.round(n).toLocaleString('es-CL');
 const fmtD=n=>n==null?'—':n.toFixed(1);
 const fmtK=n=>fmt(n);
-const fmtFecha=f=>{if(!f)return '—';var p=f.split('-');return p[2]+'-'+p[1]+'-'+(p[0]||'').slice(-2);};  // sin abreviaciones K/M
+const fmtFecha=f=>{if(!f)return '—';var p=f.split('-');return p[2]+'-'+p[1]+'-'+(p[0]||'').slice(-2);};
+const fmtTonKg=ton=>fmt(Math.round((ton||0)*1000)); // ton→kg display  // sin abreviaciones K/M
 function sv(id){const e=document.getElementById(id);return e?e.value:'';}
 function el(id){return document.getElementById(id);}
 function dx(id){if(CH[id]){try{CH[id].destroy();}catch(e){}delete CH[id];}}
@@ -1338,7 +1339,7 @@ function updateHomeKpis(){
   setEl('hKgIn',  fmtK(kgIn));
   setEl('hRend',  rend.toFixed(1)+'%');
   setEl('hEsp',   esps.size);
-  setEl('hTon',   ton.toFixed(1)+' t');
+  setEl('hTon',   fmt(cajas));
   setEl('hCump',  cajas>0?(cajas/cajas*100).toFixed(0)+'%':'—');
   setEl('hSku',   skus.size);
   setEl('hTpPerd',  fmtK(tp_zciq.reduce(function(a,r){return a+r.minutos;},0))+' min');
@@ -1676,7 +1677,7 @@ function buildKpiS3(pd){
     '<div class="kbar"><div class="kbf" style="width:'+Math.min(100,pctCump)+'%;background:'+(pctCump>=100?'var(--grn)':pctCump>=85?'var(--amb)':'var(--red)')+'"></div></div></div>'
     :'<div class="kpi kb"><div class="klbl">Cajas Programadas</div><div class="kval" style="color:var(--mut)">—</div><div class="ksub">sin programa esta semana</div></div>';
   el('s3Kpis').innerHTML=
-    '<div class="kpi kb"><div class="klbl">Toneladas Reales</div><div class="kval">'+ton.toFixed(1)+'</div><div class="ksub">producción total</div></div>'+
+    '<div class="kpi kb"><div class="klbl">Kg Reales</div><div class="kval">'+fmtTonKg(ton)+'</div><div class="ksub">kg producción total</div></div>'+
     kpiCumpStr+
     '<div class="kpi kg"><div class="klbl">Cajas Producidas</div><div class="kval">'+fmt(cajas)+'</div><div class="ksub">total período</div></div>'+
     '<div class="kpi '+rc3+'"><div class="klbl">Rendimiento IQF</div><div class="kval">'+rend3.toFixed(1)+'%</div><div class="ksub">Kg Aprobados ÷ Kg Ingresados</div></div>'+
@@ -1817,8 +1818,8 @@ function buildS3Charts(pd){
   // ── Toneladas por mes ──────────────────────────────────────────────────
   ddBar('dd_s3TonMes','s3TonMes',pd,'mes',{},function(id,ddd){
     dx(id); if(!el(id))return;
-    var data=ddd.sumFn(function(s){return+(s.reduce(function(a,r){return a+r.ton_real;},0).toFixed(2));});
-    mkBar(id,ddd.labels,[{label:'Toneladas',data:data,backgroundColor:'rgba(34,197,94,.65)',borderRadius:3}]);
+    var data=ddd.sumFn(function(s){return Math.round(s.reduce(function(a,r){return a+r.ton_real;},0)*1000);});
+    mkBar(id,ddd.labels,[{label:'Kgs',data:data,backgroundColor:'rgba(34,197,94,.65)',borderRadius:3}]);
   });
 
   // ── BPM drill-down ────────────────────────────────────────────────────
@@ -2121,12 +2122,12 @@ function buildS3Lines(pd){
       '<div class="lghead" onclick="toggleLG(this)">'+
         '<div class="lgh-dot" style="background:'+col+'"></div>'+
         '<span class="lgh-title">'+(LMAP[l]||l)+'</span>'+
-        '<span class="lgh-stats">Ton: '+ton.toFixed(1)+' · Cajas: '+fmt(cajas)+' · B/Min: '+bpm.toFixed(1)+'/'+bpmS.toFixed(1)+' std</span>'+
+        '<span class="lgh-stats">Ton: '+fmtTonKg(ton)+' kgs · Cajas: '+fmt(cajas)+' · B/Min: '+bpm.toFixed(1)+'/'+bpmS.toFixed(1)+' std</span>'+
         '<span class="lgh-arrow">▼</span>'+
       '</div>'+
       '<div class="lgbody">'+
         '<div class="lkpis">'+
-          '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn)">'+ton.toFixed(1)+'</div><div class="lksub">toneladas</div></div>'+
+          '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn)">'+fmtTonKg(ton)+'</div><div class="lksub">kgs reales</div></div>'+
           '<div class="lk"><div class="lklbl">Cajas Producidas</div><div class="lkval" style="color:var(--acc2)">'+fmtK(cajas)+'</div><div class="lksub">unidades</div></div>'+
           '<div class="lk"><div class="lklbl">Cajas Prog.</div><div class="lkval" style="color:'+(lProgCajas>0?'var(--acc2)':'var(--mut)')+'">'+( lProgCajas>0?fmt(lProgCajas):'—')+'</div><div class="lksub">'+(lProgCajas>0?'según programa':'sin programa')+'</div></div>'+
           '<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+(lProgCajas>0?lcc:'var(--mut)')+'">'+( lProgCajas>0?lPctCump.toFixed(1)+'%':'—')+'</div><div class="lksub">'+(lProgCajas>0?fmt(cajasConProg)+' / '+fmt(lProgCajas):'sin programa')+'</div></div>'+
@@ -2460,11 +2461,11 @@ function buildTbls3(pd){
   var topDias=Object.entries(byDay).sort(function(a,b){return b[1].ton-a[1].ton;}).slice(0,3);
   var htmlDias=topDias.length?'<div class="tcard"><div class="thd">'+
     '<span class="tht">🏆 Top 3 Días</span><span class="thc">por Toneladas</span></div>'+
-    '<table><thead><tr><th>Fecha</th><th>Especie</th><th>Ton.</th><th>Cajas</th></tr></thead><tbody>'+
+    '<table><thead><tr><th>Fecha</th><th>Especie</th><th>Kgs</th><th>Cajas</th></tr></thead><tbody>'+
     topDias.map(function(e){return'<tr>'+
       '<td style="white-space:nowrap">'+fmtFecha(e[0])+'</td>'+
       '<td>'+e[1].esp+'</td>'+
-      '<td style="font-family:var(--mono);color:var(--grn)">'+e[1].ton.toFixed(2)+'</td>'+
+      '<td style="font-family:var(--mono);color:var(--grn)">'+fmtTonKg(e[1].ton)+'<span style=\'font-size:8px;color:var(--mut);\'>kgs</span></td>'+
       '<td style="font-family:var(--mono)">'+fmt(e[1].cajas)+'</td></tr>';}).join('')+
     '</tbody></table></div>':'';
   // Top 3 SKU por cajas producidas
@@ -2477,7 +2478,7 @@ function buildTbls3(pd){
   var topSku=Object.entries(bySku).sort(function(a,b){return b[1].cajas-a[1].cajas;}).slice(0,3);
   var htmlSku=topSku.length?'<div class="tcard"><div class="thd">'+
     '<span class="tht">📦 Top 3 SKU</span><span class="thc">por Cajas</span></div>'+
-    '<table><thead><tr><th>SKU</th><th>Cajas</th><th>Ton.</th></tr></thead><tbody>'+
+    '<table><thead><tr><th>SKU</th><th>Cajas</th><th>Kgs</th></tr></thead><tbody>'+
     topSku.map(function(e){return'<tr>'+
       '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px" title="'+e[0]+'">'+e[0]+'</td>'+
       '<td style="font-family:var(--mono);color:var(--acc2);font-weight:700">'+fmt(e[1].cajas)+'</td>'+
@@ -2921,7 +2922,7 @@ function buildS3EspCols(l,sub){
           var ePctCump=eCajProg>0?(eCajasConProg/eCajProg*100):null;
           var ecc=ePctCump===null?'var(--mut)':ePctCump>=100?'var(--grn)':ePctCump>=85?'var(--amb)':'var(--red)';
           return '<div style="padding:0 10px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">'+
-            '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn);font-size:13px">'+ton.toFixed(1)+'</div></div>'+
+            '<div class="lk"><div class="lklbl">Ton. Reales</div><div class="lkval" style="color:var(--grn);font-size:13px">'+fmtTonKg(ton)+'<span style=\'font-size:8px;color:var(--mut);margin-left:2px;\'>kgs</span></div></div>'+
             '<div class="lk"><div class="lklbl">Cajas Producidas</div><div class="lkval" style="color:var(--acc2);font-size:13px">'+fmt(cajas)+'</div></div>'+
             '<div class="lk"><div class="lklbl">Cajas Prog.</div><div class="lkval" style="color:'+(eCajProg>0?'var(--acc2)':'var(--mut)')+';font-size:13px">'+(eCajProg>0?fmt(eCajProg):'—')+'</div></div>'+
             (ePctCump!==null?'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:'+ecc+';font-size:13px">'+ePctCump.toFixed(1)+'%</div><div class="lksub">'+fmt(eCajasConProg)+' / '+fmt(eCajProg)+'</div></div>':'<div class="lk"><div class="lklbl">Cumplimiento</div><div class="lkval" style="color:var(--mut);font-size:13px">—</div><div class="lksub">sin programa</div></div>')+
@@ -4284,7 +4285,7 @@ function runPDF(btn){
     var tpNPZENV  = pdZENV.filter(function(r){return r.tipo_paro==='Paro No Planificado';}).reduce(function(a,r){return a+r.minutos;},0);
 
     kRow([
-      {l:'Toneladas Reales',v:tonZENV.toFixed(2),s:'t reales',c:GR},
+      {l:'Kg Reales',v:fmtTonKg(tonZENV)+' kgs',s:'producción total',c:GR},
       {l:'Cajas Producidas',v:fmtN(cajZENV),s:'unidades',c:AC},
       {l:'Cajas Programadas',v:cajProg>0?fmtN(cajProg):'—',s:'según programa',c:AM},
       {l:'Cumplimiento',v:cumpl!==null?cumpl.toFixed(1)+'%':'—',s:'vs programa',c:cumpl&&cumpl>=85?GR:RD},
@@ -4311,10 +4312,10 @@ function runPDF(btn){
           {v:String(i+1),c:AM},
           e[0].length>45?e[0].slice(0,43)+'…':e[0],
           {v:fmtN(e[1].cajas),c:AC},
-          {v:e[1].ton.toFixed(2)+' t',c:GR}
+          {v:e[1].fmtTonKg(ton)+' kgs',c:GR}
         ];
       });
-      tbl(['#','SKU','Cajas','Ton.'],skuRows,[10,110,36,30]);
+      tbl(['#','SKU','Cajas','Kgs'],skuRows,[10,110,36,30]);
     }
 
     // ── TP ZENV ─────────────────────────────────────────────────────────────
@@ -4493,7 +4494,7 @@ function renderReArea(area, lines, filterR){
       var merBolColor=merBolPct===null?CC.txt:merBolPct<=1?CC.grn:merBolPct<=2?CC.amb:CC.red;
       kpiH+=
         '<div class="kpi kb"><div class="klbl">Cajas Producidas</div><div class="kval">'+fmt(cajas)+'</div><div class="ksub">envasado</div></div>'+
-        '<div class="kpi kb"><div class="klbl">Ton. Reales</div><div class="kval">'+ton.toFixed(1)+'</div><div class="ksub">producción</div></div>'+
+        '<div class="kpi kb"><div class="klbl">Ton. Reales</div><div class="kval">'+fmtTonKg(ton)+'<span style=\'font-size:8px;color:var(--mut);margin-left:2px;\'>kgs</span></div><div class="ksub">kgs producción</div></div>'+
         '<div class="kpi" style="border-top-color:var(--mut)"><div class="klbl">Cajas Prog.</div><div class="kval" style="color:var(--mut);">'+(cajasProg>0?fmt(cajasProg):'—')+'</div><div class="ksub">según programa</div></div>'+
         '<div class="kpi" style="border-top-color:'+cumplColor+'"><div class="klbl">Cumplimiento</div><div class="kval" style="color:'+cumplColor+';">'+(cumpl!==null?cumpl.toFixed(1)+'%':'—')+'</div><div class="ksub">cajas prod/prog</div></div>'+
         '<div class="kpi" style="border-top-color:'+merCajColor+'"><div class="klbl">Merma Cajas</div><div class="kval" style="color:'+merCajColor+';">'+(merCajPct!==null?merCajPct.toFixed(1)+'%':'—')+'</div><div class="ksub">prom. consumo vs teórico</div></div>'+
