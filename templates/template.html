@@ -5480,7 +5480,7 @@ function updateSeg(){
   });
   var semKeys=Object.keys(bySem).map(Number).sort(function(a,b){return a-b;});
   var semLabels=semKeys.map(function(s){return'Sem '+s;});
-  mkBar('segSemChart',{
+  mkBarSeg('segSemChart',{
     labels:semLabels,
     datasets:[
       {label:'CT',data:semKeys.map(function(s){return bySem[s].ct;}),backgroundColor:'rgba(239,68,68,.8)',borderRadius:3},
@@ -5493,7 +5493,7 @@ function updateSeg(){
   var byLinea={};
   pd.forEach(function(r){if(r.linea)byLinea[r.linea]=(byLinea[r.linea]||0)+1;});
   var linKeys=Object.keys(byLinea).sort(function(a,b){return byLinea[b]-byLinea[a];});
-  mkBar('segLineaChart',{
+  mkBarSeg('segLineaChart',{
     labels:linKeys,
     datasets:[{label:'Registros',data:linKeys.map(function(l){return byLinea[l];}),
       backgroundColor:'rgba(168,85,247,.7)',borderRadius:3}]
@@ -5510,7 +5510,7 @@ function updateSeg(){
   var byCausa={};
   pd.forEach(function(r){if(r.accion)byCausa[r.accion]=(byCausa[r.accion]||0)+1;});
   var causaKeys=Object.keys(byCausa).sort(function(a,b){return byCausa[b]-byCausa[a];}).slice(0,8);
-  mkBar('segCausaChart',{
+  mkBarSeg('segCausaChart',{
     labels:causaKeys.map(function(c){return c.length>30?c.slice(0,28)+'…':c;}),
     datasets:[{label:'Casos',data:causaKeys.map(function(c){return byCausa[c];}),
       backgroundColor:'rgba(239,68,68,.7)',borderRadius:3}]
@@ -5541,7 +5541,7 @@ function updateSeg(){
   }
 }
 
-function mkBar(id, data, opts){
+function mkBarSeg(id, data, opts){
   if(CH[id]){try{CH[id].destroy();}catch(e){}} 
   var ctx=el(id); if(!ctx)return;
   CH[id]=new Chart(ctx,{
