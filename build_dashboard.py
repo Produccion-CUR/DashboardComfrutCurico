@@ -70,7 +70,7 @@ for _, r in df_ap.iterrows():
     prod.append({
         'fecha': fecha,
         'año': int(p[0]), 'mes': int(p[1]), 'dia': int(p[2]),
-        'semana': int(n(r['Semana'])),
+        'semana': get_sem(r['fecha'] if 'fecha' in r.index else '', str(r['Semana'])),
         'turno':  int(n(r['Turno'])),
         'linea': linea, 'area': area,
         'especie': s(r['Especie']),
@@ -99,6 +99,16 @@ for _, r in df_ap.iterrows():
         'kg_h_pers':  n(r['Produc.(Kg/H/Personas)']),
     })
 print(f"   {len(prod)} registros")
+
+# Build authoritative fecha→semana from AP (used by all other sheets)
+FECHA_SEM = df_ap.groupby('fecha')['Semana'].first().astype(int).to_dict()
+
+def get_sem(fecha, fallback):
+    if fecha in FECHA_SEM:
+        return FECHA_SEM[fecha]
+    try: return int(float(fallback)) if fallback else 0
+    except: return 0
+
 
 # ── 2. PROGRAMA ENVASADO ──────────────────────────────────────────────────────
 print("2. Programa Envasado...")
@@ -152,7 +162,7 @@ for _, r in df_tp.iterrows():
     minutos = n(r.get('T.Minutos', '0'))
     if minutos <= 0: continue
     p = fecha.split('-')
-    sem = int(n(r.get('Semana', '0')))
+    sem = get_sem(fecha, r.get('Semana', '0'))
     if not sem:
         try:
             dt = datetime.date(int(p[0]), int(p[1]), int(p[2]))
@@ -217,9 +227,12 @@ def build_pidx(records):
 
 zciq_r   = [r for r in prod if r['area'] == 'ZCIQ']
 zenv_r   = [r for r in prod if r['area'] == 'ZENV']
-all_idx  = build_pidx(prod)
-zciq_idx = build_pidx(zciq_r)
-zenv_idx = build_pidx(zenv_r)
+zciq_tp  = [r for r in perdidas if r['area'] == 'ZCIQ']
+zenv_tp  = [r for r in perdidas if r['area'] == 'ZENV']
+# Combine PROD + TP so sem filter works for both screens
+all_idx  = build_pidx(prod + perdidas)
+zciq_idx = build_pidx(zciq_r + zciq_tp)
+zenv_idx = build_pidx(zenv_r + zenv_tp)
 pidx = {
     'MS': all_idx['MS'],   'MD': all_idx['MD'],   'SD': all_idx['SD'],
     'MS_ZCIQ': zciq_idx['MS'], 'MD_ZCIQ': zciq_idx['MD'], 'SD_ZCIQ': zciq_idx['SD'],
