@@ -3,7 +3,7 @@
 build_dashboard.py — Lee el Excel de data/, genera los JSONs, embebe en el template
 y escribe docs/index.html
 """
-import sys, json, os, datetime, glob
+import sys, json, os, datetime
 from pathlib import Path
 from collections import defaultdict
 
@@ -14,21 +14,18 @@ TMPL_DIR = ROOT / 'templates'
 OUT_DIR  = ROOT / 'docs'
 OUT_DIR.mkdir(exist_ok=True)
 
-# Buscar Excel en data/
 excels = sorted(DATA_DIR.glob('*.xlsx'))
 if not excels:
     print("ERROR: No se encontró ningún .xlsx en data/"); sys.exit(1)
-EXCEL = str(excels[-1])   # el más reciente si hay varios
+EXCEL = str(excels[-1])
 print(f"Excel: {EXCEL}")
 
-# Buscar template
 templates = list(TMPL_DIR.glob('*.html'))
 if not templates:
     print("ERROR: No se encontró template en templates/"); sys.exit(1)
 TEMPLATE = str(templates[0])
 print(f"Template: {TEMPLATE}")
 
-# ── Dependencias ──────────────────────────────────────────────────────────────
 try:
     import pandas as pd
 except ImportError:
@@ -62,6 +59,16 @@ df_ap = pd.read_excel(xl, 'Asistencia + Produccion', dtype={'Material': str})
 df_ap['fecha'] = df_ap['Inic.tratamiento'].apply(fechastr)
 df_ap = df_ap[df_ap['fecha'].str.len() == 10].copy()
 
+# Build authoritative fecha→semana from AP FIRST (before processing any other sheet)
+FECHA_SEM = df_ap.groupby('fecha')['Semana'].first().astype(int).to_dict()
+
+def get_sem(fecha, fallback):
+    """AP semana is authoritative. Fallback for dates not in AP."""
+    if fecha in FECHA_SEM:
+        return FECHA_SEM[fecha]
+    try: return int(float(fallback)) if fallback and str(fallback) != 'nan' else 0
+    except: return 0
+
 prod = []
 for _, r in df_ap.iterrows():
     fecha = r['fecha']; p = fecha.split('-')
@@ -70,7 +77,7 @@ for _, r in df_ap.iterrows():
     prod.append({
         'fecha': fecha,
         'año': int(p[0]), 'mes': int(p[1]), 'dia': int(p[2]),
-        'semana': get_sem(r['fecha'] if 'fecha' in r.index else '', str(r['Semana'])),
+        'semana': int(n(r['Semana'])),
         'turno':  int(n(r['Turno'])),
         'linea': linea, 'area': area,
         'especie': s(r['Especie']),
@@ -100,16 +107,6 @@ for _, r in df_ap.iterrows():
     })
 print(f"   {len(prod)} registros")
 
-# Build authoritative fecha→semana from AP (used by all other sheets)
-FECHA_SEM = df_ap.groupby('fecha')['Semana'].first().astype(int).to_dict()
-
-def get_sem(fecha, fallback):
-    if fecha in FECHA_SEM:
-        return FECHA_SEM[fecha]
-    try: return int(float(fallback)) if fallback else 0
-    except: return 0
-
-
 # ── 2. PROGRAMA ENVASADO ──────────────────────────────────────────────────────
 print("2. Programa Envasado...")
 df_prog = pd.read_excel(xl, 'Programa Envasado', header=None)
@@ -135,10 +132,10 @@ for ri in range(2, len(df_prog)):
                      'turno': turno, 'cajas_prog': val_f})
 print(f"   {len(prog)} registros")
 
-# Validación
-prod_zenv = [r for r in prod if r['area'] == 'ZENV' and r['cod']]
+# Validación cumplimiento
+prod_zenv     = [r for r in prod if r['area'] == 'ZENV' and r['cod']]
 prog_keys_set = {(p['fecha'], p['cod'], p['turno']) for p in prog}
-matched = [p for p in prog if any(
+matched       = [p for p in prog if any(
     r['fecha'] == p['fecha'] and r['cod'] == p['cod'] and r['turno'] == p['turno']
     for r in prod_zenv)]
 con_prog = sum(r['cajas'] for r in prod_zenv
@@ -164,9 +161,7 @@ for _, r in df_tp.iterrows():
     p = fecha.split('-')
     sem = get_sem(fecha, r.get('Semana', '0'))
     if not sem:
-        try:
-            dt = datetime.date(int(p[0]), int(p[1]), int(p[2]))
-            sem = dt.isocalendar()[1]
+        try: sem = datetime.date(int(p[0]), int(p[1]), int(p[2])).isocalendar()[1]
         except: sem = 0
     perdidas.append({
         'fecha': fecha,
@@ -181,37 +176,51 @@ for _, r in df_tp.iterrows():
     })
 print(f"   {len(perdidas)} registros")
 
-# ── 4. TEORICO (desde AP agrupado por fecha+linea) ────────────────────────────
-print("4. Teorico...")
+# ── 4. SEGURIDAD ──────────────────────────────────────────────────────────────
+seg = []
+if 'Seguridad' in xl.sheet_names:
+    print("4. Seguridad...")
+    df_s = pd.read_excel(xl, 'Seguridad')
+    df_s['fecha'] = df_s['Fecha'].apply(fechastr)
+    df_s = df_s[df_s['fecha'].str.len() == 10].copy()
+    for _, r in df_s.iterrows():
+        fecha = r['fecha']; p = fecha.split('-')
+        sem = get_sem(fecha, str(r['Semana']))
+        seg.append({
+            'fecha': fecha, 'año': int(p[0]), 'mes': int(p[1]), 'dia': int(p[2]),
+            'semana': sem, 'rut': s(r['Rut']), 'turno': s(r['Turno']),
+            'supervisor': s(r['Supervisor']), 'linea': s(r['Linea']),
+            'cantidad': int(n(r['Cantidad'])), 'nombre': s(r['Nombre']),
+            'lesion':   s(r['Lesión o situación ']),
+            'accion':   s(r['Acción / Condición Sub Estándar']),
+            'medida':   s(r['Medida inmediata adoptada por jefatura']),
+            'diat':     s(r['DIAT']),
+        })
+    print(f"   {len(seg)} registros")
+else:
+    print("4. Seguridad: hoja no encontrada, omitiendo")
+
+# ── 5. TEORICO (desde AP agrupado por fecha+linea) ────────────────────────────
+print("5. Teorico...")
 grp_td = df_ap.groupby(['fecha', 'Pto. Trabajo']).agg({
-    'T.Minutos':          'sum',
-    'Tiempo Efec.Min.':   'sum',
-    'Paros Plan Min.':    'sum',
-    'Paros No Plan Min.': 'sum',
-    'Semana':             'first',
+    'T.Minutos': 'sum', 'Tiempo Efec.Min.': 'sum',
+    'Paros Plan Min.': 'sum', 'Paros No Plan Min.': 'sum', 'Semana': 'first',
 }).reset_index()
 teorico = []
 for _, r in grp_td.iterrows():
     fecha = r['fecha']; p = fecha.split('-')
-    try:
-        dt  = datetime.date(int(p[0]), int(p[1]), int(p[2]))
-        sem = dt.isocalendar()[1]
-    except: sem = int(n(r['Semana']))
+    sem = get_sem(fecha, r['Semana'])
     if n(r['T.Minutos']) <= 0: continue
     teorico.append({
-        'fecha': fecha,
-        'año': int(p[0]), 'mes': int(p[1]), 'dia': int(p[2]),
-        'semana': sem,
-        'linea':    s(r['Pto. Trabajo']),
-        'minutos':  n(r['T.Minutos']),
-        'efec_min': n(r['Tiempo Efec.Min.']),
-        'plan_min': n(r['Paros Plan Min.']),
-        'nopl_min': n(r['Paros No Plan Min.']),
+        'fecha': fecha, 'año': int(p[0]), 'mes': int(p[1]), 'dia': int(p[2]),
+        'semana': sem, 'linea': s(r['Pto. Trabajo']),
+        'minutos':  n(r['T.Minutos']),  'efec_min': n(r['Tiempo Efec.Min.']),
+        'plan_min': n(r['Paros Plan Min.']), 'nopl_min': n(r['Paros No Plan Min.']),
     })
 print(f"   {len(teorico)} registros")
 
-# ── 5. PIDX (índice para filtros de semana/mes/día) ───────────────────────────
-print("5. PIDX...")
+# ── 6. PIDX (PROD + TP combinado para filtros consistentes) ──────────────────
+print("6. PIDX...")
 def build_pidx(records):
     MS = defaultdict(set); MD = defaultdict(set); SD = defaultdict(set)
     for r in records:
@@ -225,11 +234,11 @@ def build_pidx(records):
         'SD': {k: sorted(v) for k, v in SD.items()},
     }
 
-zciq_r   = [r for r in prod if r['area'] == 'ZCIQ']
-zenv_r   = [r for r in prod if r['area'] == 'ZENV']
-zciq_tp  = [r for r in perdidas if r['area'] == 'ZCIQ']
-zenv_tp  = [r for r in perdidas if r['area'] == 'ZENV']
-# Combine PROD + TP so sem filter works for both screens
+zciq_r  = [r for r in prod     if r['area'] == 'ZCIQ']
+zenv_r  = [r for r in prod     if r['area'] == 'ZENV']
+zciq_tp = [r for r in perdidas if r['area'] == 'ZCIQ']
+zenv_tp = [r for r in perdidas if r['area'] == 'ZENV']
+
 all_idx  = build_pidx(prod + perdidas)
 zciq_idx = build_pidx(zciq_r + zciq_tp)
 zenv_idx = build_pidx(zenv_r + zenv_tp)
@@ -239,23 +248,21 @@ pidx = {
     'MS_ZENV': zenv_idx['MS'], 'MD_ZENV': zenv_idx['MD'], 'SD_ZENV': zenv_idx['SD'],
 }
 
-# ── 6. LINE_DISP ──────────────────────────────────────────────────────────────
+# ── 7. LINE_DISP ──────────────────────────────────────────────────────────────
 ld = defaultdict(lambda: {'min': 0.0, 'efec': 0.0, 'plan': 0.0, 'nopl': 0.0})
 for r in teorico:
     key = f"{r['linea']}|{r['año']}-{str(r['mes']).zfill(2)}"
-    ld[key]['min']  += r['minutos']
-    ld[key]['efec'] += r['efec_min']
-    ld[key]['plan'] += r['plan_min']
-    ld[key]['nopl'] += r['nopl_min']
+    ld[key]['min']  += r['minutos'];  ld[key]['efec'] += r['efec_min']
+    ld[key]['plan'] += r['plan_min']; ld[key]['nopl'] += r['nopl_min']
 line_disp = [{'key': k, 'linea': k.split('|')[0], 'periodo': k.split('|')[1], **v}
              for k, v in ld.items()]
 
-# ── 7. EMBEBER EN TEMPLATE ────────────────────────────────────────────────────
-print("7. Generando docs/index.html...")
+# ── 8. EMBEBER EN TEMPLATE ────────────────────────────────────────────────────
+print("8. Generando docs/index.html...")
 with open(TEMPLATE, encoding='utf-8') as f:
     html = f.read()
 
-replacements = [
+for placeholder, data in [
     ('/*PROD_DATA*/', json.dumps(prod)),
     ('/*PIDX_DATA*/', json.dumps(pidx)),
     ('/*PROG_DATA*/', json.dumps(prog)),
@@ -263,8 +270,8 @@ replacements = [
     ('/*TD_DATA*/',   json.dumps(teorico)),
     ('/*IDX_DATA*/',  json.dumps(pidx)),
     ('/*LD_DATA*/',   json.dumps(line_disp)),
-]
-for placeholder, data in replacements:
+    ('/*SEG_DATA*/',  json.dumps(seg)),
+]:
     html = html.replace(placeholder, data)
 
 out_path = OUT_DIR / 'index.html'
@@ -275,8 +282,9 @@ size_kb = len(html) // 1024
 print(f"   ✅ docs/index.html — {size_kb} KB")
 print()
 print("=== RESUMEN ===")
-print(f"  PROD:      {len(prod)} registros")
-print(f"  PROG:      {len(prog)} registros")
-print(f"  TP:        {len(perdidas)} registros")
-print(f"  TEORICO:   {len(teorico)} registros")
-print(f"  Output:    {size_kb} KB")
+print(f"  PROD:    {len(prod)} registros")
+print(f"  PROG:    {len(prog)} registros")
+print(f"  TP:      {len(perdidas)} registros")
+print(f"  SEG:     {len(seg)} registros")
+print(f"  TEORICO: {len(teorico)} registros")
+print(f"  Output:  {size_kb} KB")
