@@ -5637,9 +5637,11 @@ function initTempBar(){
     btn.onclick=function(){setTemp(temp);};
     pEl.appendChild(btn);
   });
-  // Hide bar if only one temporada
+  // Always show bar — shows active temporada even with only one season
   var bar=el('tempBar');
-  if(bar) bar.style.display=(sorted.length<=1?'none':'flex');
+  if(bar) bar.style.display='flex';
+  // Auto-select the only temporada if there's just one
+  if(sorted.length===1){setTemp(sorted[0]);}
 }
 
 function setTemp(temp){
