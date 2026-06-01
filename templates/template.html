@@ -512,6 +512,17 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
 
 
 /* ── Filter bar — flex item, never scrolls ── */
+.temp-bar{display:flex;align-items:center;gap:6px;padding:5px 12px;
+  background:rgba(8,13,28,.95);border-bottom:1px solid rgba(255,255,255,.07);
+  flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.temp-bar::-webkit-scrollbar{display:none;}
+.temp-pill{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;
+  cursor:pointer;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);
+  white-space:nowrap;transition:all .2s;background:transparent;letter-spacing:.04em;}
+.temp-pill.on{background:var(--acc);border-color:var(--acc);color:#fff;}
+.temp-pill:hover:not(.on){border-color:rgba(255,255,255,.4);color:rgba(255,255,255,.85);}
+.temp-lbl{font-size:9px;font-weight:700;color:var(--mut);text-transform:uppercase;
+  letter-spacing:.08em;white-space:nowrap;margin-right:2px;}
 .fbar-sticky{
   flex-shrink:0;
   display:none;
@@ -558,6 +569,11 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
     </div>
   </div>
 </nav>
+<div class="temp-bar" id="tempBar">
+  <span class="temp-lbl">Temporada</span>
+  <div id="tempPills" style="display:flex;gap:5px;"></div>
+</div>
+
 <div class="fbar-sticky" id="fbarSticky2">
     <div class="fbar-toggle" onclick="tfbar('s2')">
       <div class="fbar-left">
@@ -1405,8 +1421,17 @@ function updateHomeKpis(){
 }
 
 /* FILTER */
+function fpPD(pd){
+  // Filter TP records by active temporada
+  if(!_TEMP_ACTIVA) return pd;
+  return pd.filter(function(r){
+    var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');
+    return rt===_TEMP_ACTIVA;
+  });
+}
 function fp(o){
   return PROD.filter(function(r){
+    if(_TEMP_ACTIVA){var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');if(rt!==_TEMP_ACTIVA)return false;}
     return (!o.año||r.año==o.año)&&(!o.mes||r.mes==o.mes)&&
       (!o.sem||r.semana==o.sem)&&(!o.dia||r.dia==o.dia)&&
       (!o.area||r.area===o.area)&&(!o.linea||r.linea===o.linea)&&
@@ -2733,7 +2758,8 @@ el('fi').addEventListener('change', function(e){
       });
 
       // ── Refresh filter dropdowns ──────────────────────────────────────
-      try{popArea('s2','ZCIQ',ZCIQ_L);
+      try{initTempBar();
+popArea('s2','ZCIQ',ZCIQ_L);
 popSeg();}catch(e){}
       try{popArea('s3','ZENV',ZENV_L);}catch(e){}
       try{popAreaTP('tp2','ZCIQ');}catch(e){}
@@ -2745,6 +2771,7 @@ popSeg();}catch(e){}
       });
       // Always clear caches so fresh data is used
       window._PC={}; window._lastS3=null; window._espCache={};
+      _TEMP_ACTIVA=''; initTempBar();
       if(active==='s0')  updateHomeKpis();
       if(active==='s2')  updateArea('s2');
       if(active==='s3')  updateArea('s3');
@@ -3089,6 +3116,7 @@ function reFilterEspCol(sel){
 // TP-specific filter functions
 const fpTP=function(o){
   return PD.filter(function(r){
+    if(_TEMP_ACTIVA){var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');if(rt!==_TEMP_ACTIVA)return false;}
     return (!o.año||r.año==o.año)&&(!o.mes||r.mes==o.mes)&&
       (!o.sem||r.semana==o.sem)&&(!o.dia||r.dia==o.dia)&&
       (!o.area||r.area===o.area)&&
@@ -3891,7 +3919,7 @@ function updateAreaTP(pfx,area,lines){
     mkBarStk(pfx+'Top3NoPlan',lbls.labels,ds);
   }, 'mes', {});
   // Tables
-  buildTbls(pfx+'Tbls',PD.filter(function(r){return r.area===area;}),lines);
+  buildTbls(pfx+'Tbls',fpPD(PD.filter(function(r){return r.area===area;})),lines);
   // Update active filter pills on sticky bar
   updateFbarPills(pfx);
 }
@@ -4037,7 +4065,7 @@ function setupCascadeTP(pfx,msKey,sdKey,updateFn){
 }
 
 function popAreaTP(pfx,area){
-  var pd=PD.filter(function(r){return r.area===area;});
+  var pd=fpPD(PD.filter(function(r){return r.area===area;}));
   var años=[...new Set(pd.map(function(r){return r.año;}))].sort();
   var meses=[...new Set(pd.map(function(r){return r.mes;}))].sort(function(a,b){return a-b;});
   function fillEl(id,opts,blank){
@@ -4108,7 +4136,7 @@ function runPDF(btn){
       return true;
     }
     var prodAll = PROD.filter(filterR);
-    var pdAll   = PD.filter(filterR);
+    var pdAll   = fpPD(PD).filter(filterR);
     var tdAll   = TD.filter(filterR);
     if(!prodAll.length){
       // fallback to latest semana
@@ -4116,7 +4144,7 @@ function runPDF(btn){
       var ls=allSems[0]||0;
       if(ls){
         prodAll=PROD.filter(function(r){return r.semana===ls;});
-        pdAll  =PD.filter(function(r){return r.semana===ls;});
+        pdAll  =fpPD(PD).filter(function(r){return r.semana===ls;});
         tdAll  =TD.filter(function(r){return r.semana===ls;});
       }
     }
@@ -4495,7 +4523,7 @@ function updateResumen(){
 
 function renderReArea(area, lines, filterR){
   var prod=PROD.filter(function(r){return r.area===area&&filterR(r);});
-  var pd=PD.filter(function(r){return lines.includes(r.linea)&&filterR(r);});
+  var pd=fpPD(PD).filter(function(r){return lines.includes(r.linea)&&filterR(r);});
   var td=TD.filter(function(r){return lines.includes(r.linea)&&filterR(r);});
   _rePD[area]=pd; // store for pareto toggle
 
@@ -5441,7 +5469,7 @@ function resetSeg(){
 function updateSeg(){
   if(!SEG||!SEG.length)return;
   var mes=sv('segM'),sem=sv('segS'),tur=sv('segT'),lin=sv('segL'),sup=sv('segSup'),diat=sv('segDiat');
-  var pd=SEG.filter(function(r){
+  var pd=fpPD(SEG).filter(function(r){
     if(mes  && String(r.mes)!==mes)  return false;
     if(sem  && String(r.semana)!==sem) return false;
     if(tur  && r.turno!==tur)   return false;
@@ -5569,6 +5597,79 @@ function mkDon(id, labels, data, colors, title){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}},
         title:{display:!!title,text:title,font:{size:10},color:C.txt}}}
+  });
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   TEMPORADA — filtro global de temporada
+   Lógica: mes >= 7 → año_temporada = año calendario
+           mes <  7 → año_temporada = año calendario - 1
+   Ej: sep-dic 2025 → T25-26 | ene-may 2026 → T25-26
+══════════════════════════════════════════════════════════════ */
+var _TEMP_ACTIVA = '';  // '' = todas las temporadas
+
+function getTemporada(fecha){
+  var p=fecha.split('-'); var año=+p[0]; var mes=+p[1];
+  var t=mes>=7?año:año-1;
+  return (String(t).slice(-2))+'-'+(String(t+1).slice(-2));
+}
+
+function initTempBar(){
+  // Get unique temporadas from PROD + PD
+  var temps=new Set();
+  PROD.forEach(function(r){if(r.temporada)temps.add(r.temporada);
+    else temps.add(getTemporada(r.fecha));});
+  PD.forEach(function(r){if(r.temporada)temps.add(r.temporada);
+    else temps.add(getTemporada(r.fecha));});
+  var sorted=[...temps].sort();
+  var pEl=el('tempPills'); if(!pEl)return;
+  pEl.innerHTML='';
+  // "Todas" pill
+  var all=document.createElement('button');
+  all.className='temp-pill on'; all.textContent='Todas';
+  all.onclick=function(){setTemp('');};
+  pEl.appendChild(all);
+  sorted.forEach(function(temp){
+    var btn=document.createElement('button');
+    btn.className='temp-pill'; btn.textContent='T '+temp;
+    btn.dataset.temp=temp;
+    btn.onclick=function(){setTemp(temp);};
+    pEl.appendChild(btn);
+  });
+  // Hide bar if only one temporada
+  var bar=el('tempBar');
+  if(bar) bar.style.display=(sorted.length<=1?'none':'flex');
+}
+
+function setTemp(temp){
+  _TEMP_ACTIVA=temp;
+  // Update pill active state
+  var pEl=el('tempPills'); if(!pEl)return;
+  pEl.querySelectorAll('.temp-pill').forEach(function(btn){
+    btn.classList.toggle('on',
+      (temp===''&&btn.textContent==='Todas')||(btn.dataset&&btn.dataset.temp===temp));
+  });
+  // Refresh current active screen
+  var screens=['s2','s3','tp2','tp3','re','cost','seg'];
+  var active=screens.find(function(id){
+    var e=document.getElementById(id); return e&&e.classList.contains('on');
+  });
+  if(active==='s2')  updateArea('s2');
+  else if(active==='s3')  updateArea('s3');
+  else if(active==='tp2') updateAreaTP('tp2','ZCIQ',ZCIQ_L);
+  else if(active==='tp3') updateAreaTP('tp3','ZENV',ZENV_L);
+  else if(active==='re')  updateResumen();
+  else if(active==='cost') updateCostos&&updateCostos();
+  else if(active==='seg')  updateSeg&&updateSeg();
+}
+
+function fpTemp(records){
+  // Filter records by active temporada
+  if(!_TEMP_ACTIVA) return records;
+  return records.filter(function(r){
+    var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');
+    return rt===_TEMP_ACTIVA;
   });
 }
 
