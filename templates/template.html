@@ -9713,10 +9713,65 @@ function calcTempData(temp){
     apd.forEach(function(r){if(r.falla)fallaMap[r.falla]=(fallaMap[r.falla]||0)+r.minutos;});
     var top3=Object.keys(fallaMap).sort(function(a,b){return fallaMap[b]-fallaMap[a];}).slice(0,3);
 
+    // ── fallaMap split by Plan / NoPlan ─────────────────
+    var fallaMapPlan={}, fallaMapNoPlan={};
+    apd.forEach(function(r){
+      if(!r.falla) return;
+      if(r.tipo_paro==='Paro Planificado')
+        fallaMapPlan[r.falla]=(fallaMapPlan[r.falla]||0)+r.minutos;
+      else
+        fallaMapNoPlan[r.falla]=(fallaMapNoPlan[r.falla]||0)+r.minutos;
+    });
+    // ── Línea × Especie (ZCIQ only) ───────────────────
+    var lineaEsp={};
+    if(areaName==='ZCIQ'){
+      ap.forEach(function(r){
+        var lin=LMAP[r.linea]||r.linea;
+        var esp=r.especie||'—';
+        if(!lineaEsp[lin]) lineaEsp[lin]={};
+        if(!lineaEsp[lin][esp]) lineaEsp[lin][esp]={kg:0,iqf:0};
+        lineaEsp[lin][esp].kg  += r.kg_ingresados;
+        lineaEsp[lin][esp].iqf += r.iqf_aprobado;
+      });
+    }
+    // ── SKU map (ZENV only) ───────────────────────────
+    var skuMap={};
+    if(areaName==='ZENV'){
+      ap.forEach(function(r){
+        if(!r.sku) return;
+        if(!skuMap[r.sku]) skuMap[r.sku]={cajas:0,ton:0,cajasProg:0,cajasConProg:0,bpmSum:0,bpmN:0,teoC:0,conC:0,teoB:0,conB:0};
+        var s=skuMap[r.sku];
+        s.cajas+=r.cajas; s.ton+=r.ton_real;
+        if(r.bpm_total>0){s.bpmSum+=r.bpm_total;s.bpmN++;}
+        s.teoC+=(r.teo_cajas||0); s.conC+=(r.con_cajas||0);
+        s.teoB+=(r.teo_bolsas||0); s.conB+=(r.con_bolsas||0);
+      });
+      // Match prog cajas per SKU
+      var progByCod={}, prodConProgByCod={};
+      PROG.forEach(function(p){
+        var matched=ap.some(function(r){return r.fecha===p.fecha&&(r.cod||'').trim()===(p.cod||'').trim()&&r.turno===p.turno;});
+        if(matched) progByCod[p.cod]=(progByCod[p.cod]||0)+p.cajas_prog;
+      });
+      ap.forEach(function(r){
+        var hasP=PROG.some(function(p){return p.fecha===r.fecha&&(p.cod||'').trim()===(r.cod||'').trim()&&p.turno===r.turno;});
+        if(hasP&&r.sku) prodConProgByCod[r.sku]=(prodConProgByCod[r.sku]||0)+r.cajas;
+      });
+      var codToSku={};
+      ap.forEach(function(r){if(r.cod&&r.sku)codToSku[r.cod]=r.sku;});
+      Object.keys(progByCod).forEach(function(cod){
+        var skuName=codToSku[cod];
+        if(skuName&&skuMap[skuName]){
+          skuMap[skuName].cajasProg+=Math.round(progByCod[cod]);
+          skuMap[skuName].cajasConProg+=(prodConProgByCod[skuName]||0);
+        }
+      });
+    }
     return {kgIn:kgIn,iqf:iqf,rend:rend,cajas:cajas,ton:ton,
-            oee:oee,tPerd:tPerd,tPlan:tPlan,tNoPl:tNoPl,evTP:apd.length,
+            oee:oee,tTeo:tTeo,tPerd:tPerd,tPlan:tPlan,tNoPl:tNoPl,evTP:apd.length,
             merCaj:merCaj,merBol:merBol,bpmProm:bpmProm,
-            cajasProg:cajasProg,cumpl:cumpl,top3:top3,fallaMap:fallaMap};
+            cajasProg:cajasProg,cumpl:cumpl,
+            fallaMap:fallaMap,fallaMapPlan:fallaMapPlan,fallaMapNoPlan:fallaMapNoPlan,
+            lineaEsp:lineaEsp,skuMap:skuMap};
   }
   return {
     zciq: areaData('ZCIQ', ZCIQ_L),
@@ -9732,8 +9787,7 @@ function updateCmp(){
   var t2 = (document.getElementById('cmpT2')||{}).value||'';
   var t3 = (document.getElementById('cmpT3')||{}).value||'';
   var temps = [t1,t2,t3].filter(function(x){return x;});
-
-  var body = document.getElementById('cmpBody');
+  var body  = document.getElementById('cmpBody');
   if(!body) return;
 
   if(temps.length < 2){
@@ -9745,290 +9799,379 @@ function updateCmp(){
   }
 
   // Destroy old charts
-  Object.keys(_CMP_CHARTS).forEach(function(k){
-    try{_CMP_CHARTS[k].destroy();}catch(e){}
-  });
+  Object.keys(_CMP_CHARTS).forEach(function(k){try{_CMP_CHARTS[k].destroy();}catch(e){}});
   _CMP_CHARTS={};
 
-  // Compute data for each temporada
+  // Color palette
+  var TC = ['#3b82f6','#22c55e','#f59e0b'];
+  var TD = ['rgba(59,130,246,.12)','rgba(34,197,94,.12)','rgba(245,158,11,.12)'];
+
+  // ── Compute all data per temporada ───────────────────────────────────────
   var data = temps.map(function(temp){ return {temp:temp, d:calcTempData(temp)}; });
 
-  // Color palette per temporada
-  var T_COLORS = ['#3b82f6','#22c55e','#f59e0b'];
-  var T_DARK   = ['rgba(59,130,246,.15)','rgba(34,197,94,.15)','rgba(245,158,11,.15)'];
+  // ── Header badge helper ───────────────────────────────────────────────────
+  function hdr(i){ return '<th style="padding:10px 12px;text-align:center;background:'+TD[i]+
+    ';border-bottom:3px solid '+TC[i]+';color:'+TC[i]+';font-size:11px;font-weight:800;min-width:110px;">'+
+    temps[i]+'</th>'; }
+  function hdrs(){ return temps.map(function(_,i){return hdr(i);}).join(''); }
 
-  function pct(v,dec){ return v!=null?v.toFixed(dec!=null?dec:1)+'%':'—'; }
-  function num(v,dec){ return v!=null&&v>0?fmtK(v):'—'; }
-  function minFmt(v){ return v>0?Math.round(v)+' min':'0'; }
-
-  // ── Metric row helper ───────────────────────────────────────────────────
-  function metricVal(v, fmt_fn, meta, thresh){
-    // thresh: {good: fn(v)->bool, warn: fn(v)->bool}
-    var txt = fmt_fn(v);
-    var color = 'var(--txt)';
-    if(thresh && v!=null){
-      if(thresh.good && thresh.good(v)) color = CC.grn;
-      else if(thresh.warn && thresh.warn(v)) color = CC.amb;
-      else if(thresh.bad) color = CC.red;
-    }
-    return {txt:txt, color:color};
+  // ── Mark best value per row ───────────────────────────────────────────────
+  function markBest(vals, lowerBetter){
+    var nums = vals.map(function(v){return (v!=null&&v>0)?v:null;});
+    var valid = nums.filter(function(x){return x!=null;});
+    if(valid.length<2) return vals.map(function(){return false;});
+    var best = lowerBetter ? Math.min.apply(null,valid) : Math.max.apply(null,valid);
+    return nums.map(function(v){return v===best;});
   }
 
-  // ── Build comparison table for an area ──────────────────────────────────
-  function buildAreaSection(areaKey, areaLabel, icon){
-    var isZCIQ = areaKey==='zciq';
-    var cols = data.map(function(d,i){
-      return '<th style="padding:10px 12px;text-align:center;background:'+T_DARK[i]+';'+
-             'border-bottom:3px solid '+T_COLORS[i]+';color:'+T_COLORS[i]+';font-size:11px;'+
-             'font-weight:800;min-width:120px;">'+d.temp+'</th>';
+  // ── Metric row builder ────────────────────────────────────────────────────
+  function mrow(label, sub, vals, colors, bests, ri){
+    var bg = ri%2===0?'rgba(15,25,50,.35)':'transparent';
+    var cells = vals.map(function(v,i){
+      var badge = bests[i]
+        ? '<span style="font-size:8px;background:'+TC[i]+';color:#000;border-radius:3px;'+
+          'padding:1px 4px;margin-left:4px;font-weight:700;">✓</span>' : '';
+      return '<td style="padding:10px 12px;text-align:center;font-size:15px;font-weight:800;'+
+             'color:'+colors[i]+';border-bottom:1px solid rgba(255,255,255,.04);">'+v+badge+'</td>';
     }).join('');
+    return '<tr style="background:'+bg+';">'+
+      '<td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);">'+
+      '<div style="font-size:12px;font-weight:600;color:var(--txt);">'+label+'</div>'+
+      '<div style="font-size:9px;color:var(--mut);">'+sub+'</div></td>'+cells+'</tr>';
+  }
 
-    // Define metrics
-    var metrics = isZCIQ ? [
-      {
-        label:'🌿 Kgs Ingresados', icon:'',
-        vals: data.map(function(d){ return {v:d.d.zciq.kgIn, txt:fmt(d.d.zciq.kgIn), color:'var(--txt)'}; }),
-        sub: 'materia prima total'
-      },{
-        label:'❄️ Kgs IQF Aprobado', icon:'',
-        vals: data.map(function(d){ return {v:d.d.zciq.iqf, txt:fmt(d.d.zciq.iqf), color:'var(--acc)'}; }),
-        sub: 'producto terminado'
-      },{
-        label:'📊 Rendimiento IQF', icon:'',
-        vals: data.map(function(d){
-          var v=d.d.zciq.rend;
-          return {v:v, txt:v>0?v.toFixed(1)+'%':'—', color:v>=85?CC.grn:v>=75?CC.amb:CC.red};
-        }), sub: 'meta ≥ 85%'
-      },{
-        label:'⚙️ OEE (Disponibilidad)', icon:'',
-        vals: data.map(function(d){
-          var v=d.d.zciq.oee;
-          return {v:v, txt:v>0?v.toFixed(1)+'%':'—', color:v>=85?CC.grn:v>=70?CC.amb:CC.red};
-        }), sub: 'meta ≥ 85%'
-      },{
-        label:'⏱️ T. Perdido Total', icon:'',
-        vals: data.map(function(d){ return {v:d.d.zciq.tPerd, txt:minFmt(d.d.zciq.tPerd), color:CC.red}; }),
-        sub: 'minutos totales'
-      },{
-        label:'✅ TP Planificado', icon:'',
-        vals: data.map(function(d){ return {v:d.d.zciq.tPlan, txt:minFmt(d.d.zciq.tPlan), color:CC.grn}; }),
-        sub: 'min planificados'
-      },{
-        label:'⚡ TP No Planificado', icon:'',
-        vals: data.map(function(d){ return {v:d.d.zciq.tNoPl, txt:minFmt(d.d.zciq.tNoPl), color:CC.red}; }),
-        sub: 'min no planificados'
-      }
-    ] : [
-      {
-        label:'📦 Cajas Producidas', icon:'',
-        vals: data.map(function(d){ return {v:d.d.zenv.cajas, txt:fmt(d.d.zenv.cajas), color:CC.blu}; }),
-        sub: 'total envasado'
-      },{
-        label:'⚖️ Ton. Reales', icon:'',
-        vals: data.map(function(d){ return {v:d.d.zenv.ton, txt:d.d.zenv.ton>0?d.d.zenv.ton.toFixed(1)+' t':'—', color:'var(--txt)'}; }),
-        sub: 'kgs producción'
-      },{
-        label:'📋 Cajas Programadas', icon:'',
-        vals: data.map(function(d){ return {v:d.d.zenv.cajasProg, txt:d.d.zenv.cajasProg>0?fmt(d.d.zenv.cajasProg):'—', color:'var(--mut)'}; }),
-        sub: 'según programa'
-      },{
-        label:'🎯 Cumplimiento Prog.', icon:'',
-        vals: data.map(function(d){
-          var v=d.d.zenv.cumpl;
-          return {v:v, txt:v!=null?v.toFixed(1)+'%':'—', color:v===null?'var(--mut)':v>=100?CC.grn:v>=85?CC.amb:CC.red};
-        }), sub: 'cajas prod vs prog'
-      },{
-        label:'⚙️ OEE (Disponibilidad)', icon:'',
-        vals: data.map(function(d){
-          var v=d.d.zenv.oee;
-          return {v:v, txt:v>0?v.toFixed(1)+'%':'—', color:v>=85?CC.grn:v>=70?CC.amb:CC.red};
-        }), sub: 'meta ≥ 85%'
-      },{
-        label:'📈 BPM Promedio', icon:'',
-        vals: data.map(function(d){ var v=d.d.zenv.bpmProm; return {v:v, txt:v>0?v.toFixed(1):'—', color:CC.cyn}; }),
-        sub: 'bolsas/min promedio'
-      },{
-        label:'🗑️ Merma Cajas', icon:'',
-        vals: data.map(function(d){
-          var v=d.d.zenv.merCaj;
-          return {v:v, txt:v!=null?v.toFixed(1)+'%':'—', color:v===null?'var(--mut)':v<=1?CC.grn:v<=2?CC.amb:CC.red};
-        }), sub: 'consumo vs teórico'
-      },{
-        label:'🗑️ Merma Bolsas', icon:'',
-        vals: data.map(function(d){
-          var v=d.d.zenv.merBol;
-          return {v:v, txt:v!=null?v.toFixed(1)+'%':'—', color:v===null?'var(--mut)':v<=1?CC.grn:v<=2?CC.amb:CC.red};
-        }), sub: 'consumo vs teórico'
-      },{
-        label:'⏱️ T. Perdido Total', icon:'',
-        vals: data.map(function(d){ return {v:d.d.zenv.tPerd, txt:minFmt(d.d.zenv.tPerd), color:CC.red}; }),
-        sub: 'minutos totales'
-      }
-    ];
+  // ── Section wrapper ───────────────────────────────────────────────────────
+  function section(icon, title, accentColor, tableHtml){
+    return '<div style="margin-bottom:16px;background:rgba(8,13,28,.9);border:1px solid rgba(255,255,255,.09);'+
+           'border-radius:12px;overflow:hidden;">'+
+           '<div style="padding:11px 14px;background:'+accentColor+';border-bottom:1px solid rgba(255,255,255,.07);">'+
+           '<span style="font-size:13px;font-weight:800;color:var(--txt);">'+icon+' '+title+'</span></div>'+
+           '<div style="overflow-x:auto;">'+tableHtml+'</div></div>';
+  }
 
-    // Find best value for each metric (to highlight)
-    metrics.forEach(function(m){
-      // Determine if lower is better
-      var lowerBetter = m.label.indexOf('Perdido')>=0||m.label.indexOf('Merma')>=0||
-                        m.label.indexOf('No Plan')>=0;
-      var nums = m.vals.map(function(v){return v.v!=null?v.v:null;});
-      var valid = nums.filter(function(x){return x!=null&&x>0;});
-      if(valid.length < 2) return;
-      var best = lowerBetter ? Math.min.apply(null,valid) : Math.max.apply(null,valid);
-      m.vals.forEach(function(v,i){
-        if(v.v!=null && v.v===best && v.v!==0) m.vals[i].isBest=true;
+  function baseTable(rows){
+    return '<table style="width:100%;border-collapse:collapse;min-width:300px;">'+
+           '<thead><tr>'+
+           '<th style="padding:10px 14px;text-align:left;color:var(--mut);font-size:10px;'+
+           'text-transform:uppercase;letter-spacing:.05em;background:rgba(15,25,50,.5);">Indicador</th>'+
+           hdrs()+'</tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SECCIÓN 1 — SELECCIÓN ZCIQ: KPIs generales
+  // ═══════════════════════════════════════════════════════════════════════
+  var zciqRows = '';
+  var ri = 0;
+
+  // KgIn
+  var kgVals  = data.map(function(d){return d.d.zciq.kgIn;});
+  var kgTxts  = data.map(function(d){return d.d.zciq.kgIn>0?fmt(d.d.zciq.kgIn):'—';});
+  var kgBests = markBest(kgVals, false);
+  var kgColors= data.map(function(){return 'var(--txt)';});
+  zciqRows += mrow('🌿 Kgs Ingresados','materia prima total',kgTxts,kgColors,kgBests,ri++);
+
+  // IQF
+  var iqfVals  = data.map(function(d){return d.d.zciq.iqf;});
+  var iqfTxts  = data.map(function(d){return d.d.zciq.iqf>0?fmt(d.d.zciq.iqf):'—';});
+  var iqfBests = markBest(iqfVals,false);
+  zciqRows += mrow('❄️ Kgs IQF Aprobado','producto terminado',iqfTxts,data.map(function(){return CC.acc;}),iqfBests,ri++);
+
+  // Rendimiento
+  var rendVals  = data.map(function(d){return d.d.zciq.rend;});
+  var rendTxts  = data.map(function(d){return d.d.zciq.rend>0?d.d.zciq.rend.toFixed(1)+'%':'—';});
+  var rendColor = data.map(function(d){var v=d.d.zciq.rend;return v>=85?CC.grn:v>=75?CC.amb:CC.red;});
+  zciqRows += mrow('📊 Rendimiento IQF','meta ≥ 85%',rendTxts,rendColor,markBest(rendVals,false),ri++);
+
+  // OEE
+  var oeeVals  = data.map(function(d){return d.d.zciq.oee;});
+  var oeeTxts  = data.map(function(d){return d.d.zciq.oee>0?d.d.zciq.oee.toFixed(1)+'%':'—';});
+  var oeeColor = data.map(function(d){var v=d.d.zciq.oee;return v>=85?CC.grn:v>=70?CC.amb:CC.red;});
+  zciqRows += mrow('⚙️ OEE Disponibilidad','meta ≥ 85%',oeeTxts,oeeColor,markBest(oeeVals,false),ri++);
+
+  // TP Total / Plan / NoPlan
+  // Tiempo Disponible (tTeo)
+  var tdispTxts = data.map(function(d){return d.d.zciq.tTeo>0?Math.round(d.d.zciq.tTeo).toLocaleString('es-CL')+' min':'—';});
+  zciqRows += mrow('🕐 Tiempo Disponible','minutos disponibles totales',tdispTxts,data.map(function(){return 'var(--txt)';}),markBest(data.map(function(d){return d.d.zciq.tTeo;}),false),ri++);
+
+  var tpTxts = data.map(function(d){return d.d.zciq.tPerd>0?Math.round(d.d.zciq.tPerd).toLocaleString('es-CL')+' min':'0';});
+  zciqRows += mrow('⏱️ T.Perdido Total','minutos totales',tpTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zciq.tPerd;}),true),ri++);
+  var plTxts = data.map(function(d){return d.d.zciq.tPlan>0?Math.round(d.d.zciq.tPlan).toLocaleString('es-CL')+' min':'0';});
+  zciqRows += mrow('✅ TP Planificado','paros programados',plTxts,data.map(function(){return CC.grn;}),markBest(data.map(function(d){return d.d.zciq.tPlan;}),true),ri++);
+  var npTxts = data.map(function(d){return d.d.zciq.tNoPl>0?Math.round(d.d.zciq.tNoPl).toLocaleString('es-CL')+' min':'0';});
+  zciqRows += mrow('⚡ TP No Planificado','paros imprevistos',npTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zciq.tNoPl;}),true),ri++);
+
+  var zciqKpisHtml = section('🔵','Selección ZCIQ — Indicadores Generales',
+    'rgba(59,130,246,.12)', baseTable(zciqRows));
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SECCIÓN 2 — ZCIQ: Línea × Especie
+  // ═══════════════════════════════════════════════════════════════════════
+  function buildLineaEspTabla(){
+    // Collect all lineas and especies across all temporadas
+    var allLineas = [], allEsp = [];
+    data.forEach(function(d){
+      Object.keys(d.d.zciq.lineaEsp||{}).forEach(function(lin){
+        if(allLineas.indexOf(lin)<0) allLineas.push(lin);
+        Object.keys(d.d.zciq.lineaEsp[lin]).forEach(function(esp){
+          if(allEsp.indexOf(esp)<0) allEsp.push(esp);
+        });
+      });
+    });
+    allLineas.sort(); allEsp.sort();
+    if(!allLineas.length) return '<div style="color:var(--mut);padding:14px;font-size:11px;">Sin datos de líneas</div>';
+
+    // Build header: Línea | Especie | T1 KgIng / Rend% | T2 KgIng / Rend% | T3 ...
+    var thRow1 = '<tr style="background:rgba(15,25,50,.8);">'+
+      '<th style="padding:8px 10px;text-align:left;color:var(--mut);font-size:9px;" rowspan="2">Línea</th>'+
+      '<th style="padding:8px 10px;text-align:left;color:var(--mut);font-size:9px;" rowspan="2">Especie</th>'+
+      temps.map(function(temp,i){
+        return '<th colspan="2" style="padding:8px 10px;text-align:center;color:'+TC[i]+
+               ';font-size:10px;font-weight:800;border-left:2px solid '+TC[i]+';">'+temp+'</th>';
+      }).join('')+'</tr>';
+    var thRow2 = '<tr style="background:rgba(10,18,40,.7);">'+
+      temps.map(function(_,i){
+        return '<th style="padding:5px 8px;text-align:right;color:var(--mut);font-size:8px;border-left:2px solid '+TC[i]+';">Kg Ing.</th>'+
+               '<th style="padding:5px 8px;text-align:right;color:var(--mut);font-size:8px;">Rend%</th>';
+      }).join('')+'</tr>';
+
+    var bodyRows = '';
+    var prevLin = '';
+    allLineas.forEach(function(lin){
+      allEsp.forEach(function(esp, ei){
+        // Check if any temporada has data for this lin×esp
+        var hasAny = data.some(function(d){
+          return d.d.zciq.lineaEsp&&d.d.zciq.lineaEsp[lin]&&d.d.zciq.lineaEsp[lin][esp];
+        });
+        if(!hasAny) return;
+        var bg = ei%2===0?'rgba(15,25,50,.35)':'transparent';
+        var linCell = lin!==prevLin
+          ? '<td style="padding:7px 10px;font-weight:700;color:var(--acc);white-space:nowrap;">'+lin+'</td>'
+          : '<td style="padding:7px 10px;color:var(--mut);font-size:9px;"></td>';
+        prevLin = lin;
+        var cells = temps.map(function(_, i){
+          var le = (data[i].d.zciq.lineaEsp&&data[i].d.zciq.lineaEsp[lin]&&
+                   data[i].d.zciq.lineaEsp[lin][esp]) || null;
+          if(!le||le.kg===0){
+            return '<td style="padding:7px 8px;text-align:right;color:var(--mut);border-left:2px solid '+TC[i]+'80;">—</td>'+
+                   '<td style="padding:7px 8px;text-align:right;color:var(--mut);">—</td>';
+          }
+          var rend = le.iqf/le.kg*100;
+          var rc = rend>=85?CC.grn:rend>=75?CC.amb:CC.red;
+          return '<td style="padding:7px 8px;text-align:right;color:var(--txt);border-left:2px solid '+TC[i]+'80;">'+fmtK(le.kg)+'</td>'+
+                 '<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+rc+';">'+rend.toFixed(1)+'%</td>';
+        }).join('');
+        bodyRows+='<tr style="background:'+bg+';border-bottom:1px solid rgba(255,255,255,.04);">'+
+          linCell+
+          '<td style="padding:7px 10px;color:var(--txt);">'+esp+'</td>'+
+          cells+'</tr>';
       });
     });
 
-    // Build table
-    var rows = metrics.map(function(m, ri){
-      var bg = ri%2===0?'rgba(15,25,50,.3)':'transparent';
-      var cells = m.vals.map(function(v,ci){
-        var badge = v.isBest
-          ? '<span style="font-size:8px;background:'+T_COLORS[ci]+';color:#000;border-radius:4px;padding:1px 5px;margin-left:4px;font-weight:700;">MEJOR</span>'
-          : '';
-        return '<td style="padding:11px 12px;text-align:center;font-size:16px;font-weight:800;color:'+v.color+';border-bottom:1px solid rgba(255,255,255,.04);">'+
-               v.txt+badge+'</td>';
+    return '<table style="width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap;">'+
+           '<thead>'+thRow1+thRow2+'</thead><tbody>'+bodyRows+'</tbody></table>';
+  }
+
+  var zciqLinEspHtml = section('📐','Selección ZCIQ — Rendimiento por Línea × Especie',
+    'rgba(59,130,246,.1)', buildLineaEspTabla());
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SECCIÓN 3 — ZCIQ: Causas TP — Planificado vs No Planificado
+  // ═══════════════════════════════════════════════════════════════════════
+  function buildTpCausas(areaKey){
+    var isPlan_list = [true, false];
+    var html = '';
+    isPlan_list.forEach(function(isPlan){
+      var icon  = isPlan ? '✅' : '⚡';
+      var label = isPlan ? 'Planificado' : 'No Planificado';
+      var color = isPlan ? CC.grn : CC.red;
+      var accent= isPlan ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)';
+
+      // Collect all causas across temps for this tipo
+      var allCausas = [];
+      data.forEach(function(d){
+        var fmap = isPlan ? d.d[areaKey].fallaMapPlan : d.d[areaKey].fallaMapNoPlan;
+        Object.keys(fmap||{}).forEach(function(f){ if(allCausas.indexOf(f)<0) allCausas.push(f); });
+      });
+      // Sort by max total across temps
+      allCausas.sort(function(a,b){
+        var totB=data.reduce(function(s,d){var m=isPlan?d.d[areaKey].fallaMapPlan:d.d[areaKey].fallaMapNoPlan;return s+((m||{})[b]||0);},0);
+        var totA=data.reduce(function(s,d){var m=isPlan?d.d[areaKey].fallaMapPlan:d.d[areaKey].fallaMapNoPlan;return s+((m||{})[a]||0);},0);
+        return totB-totA;
+      });
+      var top = allCausas.slice(0,8);
+      if(!top.length) return;
+
+      var rows = top.map(function(causa, ri2){
+        var bg = ri2%2===0?'rgba(15,25,50,.35)':'transparent';
+        var vals = data.map(function(d){
+          var fmap = isPlan?d.d[areaKey].fallaMapPlan:d.d[areaKey].fallaMapNoPlan;
+          return (fmap||{})[causa]||0;
+        });
+        var bests = markBest(vals, true); // lower = better for TP
+        var cells = vals.map(function(v,i){
+          var badge = bests[i]&&v>0?
+            '<span style="font-size:8px;background:'+TC[i]+';color:#000;border-radius:3px;padding:1px 4px;margin-left:3px;font-weight:700;">✓</span>':'';
+          return '<td style="padding:8px 12px;text-align:center;font-size:13px;font-weight:700;color:'+
+                 (v>0?color:'var(--mut)')+';border-bottom:1px solid rgba(255,255,255,.04);">'+
+                 (v>0?Math.round(v)+' min':'—')+badge+'</td>';
+        }).join('');
+        return '<tr style="background:'+bg+';">'+
+          '<td style="padding:8px 14px;font-size:11px;color:var(--txt);border-bottom:1px solid rgba(255,255,255,.04);">'+causa+'</td>'+
+          cells+'</tr>';
       }).join('');
-      return '<tr style="background:'+bg+';">'+
-             '<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);">'+
-             '<div style="font-size:12px;font-weight:600;color:var(--txt);">'+m.label+'</div>'+
-             '<div style="font-size:9px;color:var(--mut);">'+m.sub+'</div></td>'+
-             cells+'</tr>';
+
+      html += '<div style="margin-bottom:12px;background:rgba(8,13,28,.9);border:1px solid rgba(255,255,255,.09);'+
+              'border-radius:12px;overflow:hidden;">'+
+              '<div style="padding:10px 14px;background:'+accent+';border-bottom:1px solid rgba(255,255,255,.07);">'+
+              '<span style="font-size:12px;font-weight:700;color:'+color+';">'+icon+' TP '+label+' — Top 8 Causas</span></div>'+
+              '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:280px;">'+
+              '<thead><tr><th style="padding:8px 14px;text-align:left;color:var(--mut);font-size:10px;background:rgba(15,25,50,.5);">Causa</th>'+
+              hdrs()+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    });
+    return html;
+  }
+
+  var zciqTpHtml = buildTpCausas('zciq');
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SECCIÓN 4 — ENVASADO ZENV: KPIs generales
+  // ═══════════════════════════════════════════════════════════════════════
+  var zenvRows = ''; ri=0;
+  var cajVals = data.map(function(d){return d.d.zenv.cajas;});
+  var cajTxts = data.map(function(d){return d.d.zenv.cajas>0?fmt(d.d.zenv.cajas):'—';});
+  zenvRows += mrow('📦 Cajas Producidas','total envasado',cajTxts,data.map(function(){return CC.blu;}),markBest(cajVals,false),ri++);
+
+  var tonTxts = data.map(function(d){return d.d.zenv.ton>0?d.d.zenv.ton.toFixed(1)+' t':'—';});
+  zenvRows += mrow('⚖️ Ton. Reales','kgs producción',tonTxts,data.map(function(){return 'var(--txt)';}),markBest(data.map(function(d){return d.d.zenv.ton;}),false),ri++);
+
+  var cpTxts = data.map(function(d){return d.d.zenv.cajasProg>0?fmt(d.d.zenv.cajasProg):'—';});
+  zenvRows += mrow('📋 Cajas Programadas','según programa',cpTxts,data.map(function(){return 'var(--mut)';}),data.map(function(){return false;}),ri++);
+
+  var cumVals = data.map(function(d){return d.d.zenv.cumpl;});
+  var cumTxts = data.map(function(d){return d.d.zenv.cumpl!=null?d.d.zenv.cumpl.toFixed(1)+'%':'—';});
+  var cumColor= data.map(function(d){var v=d.d.zenv.cumpl;return v===null?'var(--mut)':v>=100?CC.grn:v>=85?CC.amb:CC.red;});
+  zenvRows += mrow('🎯 Cumplimiento Prog.','prod vs programado',cumTxts,cumColor,markBest(cumVals,false),ri++);
+
+  var zenvOeeTxts = data.map(function(d){return d.d.zenv.oee>0?d.d.zenv.oee.toFixed(1)+'%':'—';});
+  var zenvOeeColor= data.map(function(d){var v=d.d.zenv.oee;return v>=85?CC.grn:v>=70?CC.amb:CC.red;});
+  zenvRows += mrow('⚙️ OEE Disponibilidad','meta ≥ 85%',zenvOeeTxts,zenvOeeColor,markBest(data.map(function(d){return d.d.zenv.oee;}),false),ri++);
+
+  var bpmTxts = data.map(function(d){return d.d.zenv.bpmProm>0?d.d.zenv.bpmProm.toFixed(1):'—';});
+  zenvRows += mrow('📈 BPM Promedio','bolsas/min',bpmTxts,data.map(function(){return CC.cyn;}),markBest(data.map(function(d){return d.d.zenv.bpmProm;}),false),ri++);
+
+  var mcVals = data.map(function(d){return d.d.zenv.merCaj;});
+  var mcTxts = data.map(function(d){return d.d.zenv.merCaj!=null?d.d.zenv.merCaj.toFixed(1)+'%':'—';});
+  var mcColor= data.map(function(d){var v=d.d.zenv.merCaj;return v===null?'var(--mut)':v<=1?CC.grn:v<=2?CC.amb:CC.red;});
+  zenvRows += mrow('🗑️ Merma Cajas','consumo vs teórico',mcTxts,mcColor,markBest(mcVals,true),ri++);
+
+  var mbTxts = data.map(function(d){return d.d.zenv.merBol!=null?d.d.zenv.merBol.toFixed(1)+'%':'—';});
+  var mbColor= data.map(function(d){var v=d.d.zenv.merBol;return v===null?'var(--mut)':v<=1?CC.grn:v<=2?CC.amb:CC.red;});
+  zenvRows += mrow('🗑️ Merma Bolsas','consumo vs teórico',mbTxts,mbColor,markBest(data.map(function(d){return d.d.zenv.merBol;}),true),ri++);
+
+  // Tiempo Disponible ZENV
+  var zenvTdispTxts = data.map(function(d){return d.d.zenv.tTeo>0?Math.round(d.d.zenv.tTeo).toLocaleString('es-CL')+' min':'—';});
+  zenvRows += mrow('🕐 Tiempo Disponible','minutos disponibles totales',zenvTdispTxts,data.map(function(){return 'var(--txt)';}),markBest(data.map(function(d){return d.d.zenv.tTeo;}),false),ri++);
+
+  var zenpTxts = data.map(function(d){return d.d.zenv.tPerd>0?Math.round(d.d.zenv.tPerd).toLocaleString('es-CL')+' min':'0';});
+  zenvRows += mrow('⏱️ T.Perdido Total','minutos totales',zenpTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zenv.tPerd;}),true),ri++);
+
+  var zplTxts = data.map(function(d){return d.d.zenv.tPlan>0?Math.round(d.d.zenv.tPlan).toLocaleString('es-CL')+' min':'0';});
+  zenvRows += mrow('✅ TP Planificado','paros programados ZENV',zplTxts,data.map(function(){return CC.grn;}),markBest(data.map(function(d){return d.d.zenv.tPlan;}),true),ri++);
+  var znpTxts = data.map(function(d){return d.d.zenv.tNoPl>0?Math.round(d.d.zenv.tNoPl).toLocaleString('es-CL')+' min':'0';});
+  zenvRows += mrow('⚡ TP No Planificado','paros imprevistos ZENV',znpTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zenv.tNoPl;}),true),ri++);
+
+  var zenvKpisHtml = section('📦','Envasado ZENV — Indicadores Generales','rgba(245,158,11,.1)',baseTable(zenvRows));
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SECCIÓN 5 — ZENV: SKU comparado
+  // ═══════════════════════════════════════════════════════════════════════
+  function buildSkuTabla(){
+    // Collect all SKUs
+    var allSkus = [];
+    data.forEach(function(d){
+      Object.keys(d.d.zenv.skuMap||{}).forEach(function(sku){
+        if(allSkus.indexOf(sku)<0) allSkus.push(sku);
+      });
+    });
+    // Sort by max cajas across temps
+    allSkus.sort(function(a,b){
+      var tB=data.reduce(function(s,d){return s+((d.d.zenv.skuMap||{})[b]||{cajas:0}).cajas;},0);
+      var tA=data.reduce(function(s,d){return s+((d.d.zenv.skuMap||{})[a]||{cajas:0}).cajas;},0);
+      return tB-tA;
+    });
+    var top = allSkus.slice(0,15);
+    if(!top.length) return '<div style="color:var(--mut);padding:14px;font-size:11px;">Sin datos de envasado</div>';
+
+    var thRow = '<tr style="background:rgba(15,25,50,.8);">'+
+      '<th style="padding:8px 10px;text-align:left;color:var(--mut);font-size:9px;" rowspan="2">SKU</th>'+
+      temps.map(function(temp,i){
+        return '<th colspan="5" style="padding:8px 10px;text-align:center;color:'+TC[i]+
+               ';font-size:10px;font-weight:800;border-left:2px solid '+TC[i]+';">'+temp+'</th>';
+      }).join('')+'</tr>';
+    var thRow2 = '<tr style="background:rgba(10,18,40,.7);">'+
+      temps.map(function(_,i){
+        return '<th style="padding:5px 8px;text-align:right;color:var(--mut);font-size:8px;border-left:2px solid '+TC[i]+';">Cajas</th>'+
+               '<th style="padding:5px 8px;text-align:right;color:var(--mut);font-size:8px;">Cumpl%</th>'+
+               '<th style="padding:5px 8px;text-align:right;color:var(--mut);font-size:8px;">BPM</th>'+
+               '<th style="padding:5px 8px;text-align:right;color:var(--mut);font-size:8px;">Merm.Cj</th>'+
+               '<th style="padding:5px 8px;text-align:right;color:var(--mut);font-size:8px;">Merm.Bol</th>';
+      }).join('')+'</tr>';
+
+    var bodyRows = top.map(function(sku, ri2){
+      var bg = ri2%2===0?'rgba(15,25,50,.35)':'transparent';
+      var cells = temps.map(function(_,i){
+        var s = (data[i].d.zenv.skuMap||{})[sku];
+        if(!s||s.cajas===0){
+          return '<td style="padding:7px 8px;text-align:right;color:var(--mut);border-left:2px solid '+TC[i]+'80;">—</td>'+
+                 '<td style="padding:7px 8px;text-align:right;color:var(--mut);">—</td>'+
+                 '<td style="padding:7px 8px;text-align:right;color:var(--mut);">—</td>';
+        }
+        var cumpl = s.cajasProg>0?(s.cajasConProg/s.cajasProg*100):null;
+        var cc = cumpl===null?'var(--mut)':cumpl>=100?CC.grn:cumpl>=85?CC.amb:CC.red;
+        var bpm = s.bpmN>0?(s.bpmSum/s.bpmN).toFixed(1):'—';
+        var mcPct = s.teoC>0?((s.conC-s.teoC)/s.teoC*100):null;
+        var mbPct = s.teoB>0?((s.conB-s.teoB)/s.teoB*100):null;
+        var mcCol = mcPct===null?'var(--mut)':mcPct<=1?CC.grn:mcPct<=2?CC.amb:CC.red;
+        var mbCol = mbPct===null?'var(--mut)':mbPct<=1?CC.grn:mbPct<=2?CC.amb:CC.red;
+        return '<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+CC.blu+';border-left:2px solid '+TC[i]+'80;">'+fmt(s.cajas)+'</td>'+
+               '<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+cc+';">'+(cumpl!=null?cumpl.toFixed(1)+'%':'—')+'</td>'+
+               '<td style="padding:7px 8px;text-align:right;color:'+CC.cyn+';">'+bpm+'</td>'+
+               '<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+mcCol+';">'+(mcPct!=null?mcPct.toFixed(1)+'%':'—')+'</td>'+
+               '<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+mbCol+';">'+(mbPct!=null?mbPct.toFixed(1)+'%':'—')+'</td>';
+      }).join('');
+      var skuShort = sku.length>35?sku.slice(0,33)+'…':sku;
+      return '<tr style="background:'+bg+';border-bottom:1px solid rgba(255,255,255,.04);">'+
+        '<td style="padding:7px 10px;font-size:11px;color:var(--txt);" title="'+sku+'">'+skuShort+'</td>'+
+        cells+'</tr>';
     }).join('');
 
-    // Top 3 TP causes comparison
-    var causesRows = '';
-    var allCauses = [];
-    data.forEach(function(d){
-      var fmap = areaKey==='zciq'?d.d.zciq.fallaMap:d.d.zenv.fallaMap;
-      Object.keys(fmap).forEach(function(f){ if(allCauses.indexOf(f)<0) allCauses.push(f); });
-    });
-    // Sort by max total across temps
-    allCauses.sort(function(a,b){
-      var totB=data.reduce(function(s,d){var m=areaKey==='zciq'?d.d.zciq.fallaMap:d.d.zenv.fallaMap; return s+(m[b]||0);},0);
-      var totA=data.reduce(function(s,d){var m=areaKey==='zciq'?d.d.zciq.fallaMap:d.d.zenv.fallaMap; return s+(m[a]||0);},0);
-      return totB-totA;
-    });
-    allCauses.slice(0,5).forEach(function(causa, ri){
-      var bg=ri%2===0?'rgba(15,25,50,.3)':'transparent';
-      var cells=data.map(function(d,ci){
-        var fmap=areaKey==='zciq'?d.d.zciq.fallaMap:d.d.zenv.fallaMap;
-        var min=fmap[causa]||0;
-        return '<td style="padding:8px 12px;text-align:center;font-size:13px;font-weight:700;color:'+
-               (min>0?CC.red:'var(--mut)')+';border-bottom:1px solid rgba(255,255,255,.04);">'+
-               (min>0?Math.round(min)+' min':'—')+'</td>';
-      }).join('');
-      causesRows+='<tr style="background:'+bg+';">'+
-        '<td style="padding:8px 14px;font-size:11px;color:var(--txt);border-bottom:1px solid rgba(255,255,255,.04);">'+
-        causa+'</td>'+cells+'</tr>';
-    });
-
-    return '<div style="margin-bottom:20px;">'+
-      // Area header
-      '<div style="background:rgba(8,13,28,.9);border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;margin-bottom:12px;">'+
-      '<div style="padding:12px 14px;background:rgba(59,130,246,.08);border-bottom:1px solid rgba(255,255,255,.07);">'+
-      '<span style="font-size:13px;font-weight:800;color:var(--acc);">'+icon+' '+areaLabel+'</span>'+
-      '</div>'+
-      '<div style="overflow-x:auto;">'+
-      '<table style="width:100%;border-collapse:collapse;min-width:320px;">'+
-      '<thead><tr>'+
-      '<th style="padding:10px 14px;text-align:left;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.06em;background:rgba(15,25,50,.5);">Indicador</th>'+
-      cols+
-      '</tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
-      // Top causes
-      (causesRows ?
-      '<div style="background:rgba(8,13,28,.9);border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;">'+
-      '<div style="padding:10px 14px;background:rgba(239,68,68,.08);border-bottom:1px solid rgba(255,255,255,.07);">'+
-      '<span style="font-size:12px;font-weight:700;color:'+CC.red+';">🔴 Top 5 Causas Tiempo Perdido — '+areaLabel+'</span>'+
-      '</div>'+
-      '<div style="overflow-x:auto;">'+
-      '<table style="width:100%;border-collapse:collapse;min-width:320px;">'+
-      '<thead><tr>'+
-      '<th style="padding:8px 14px;text-align:left;color:var(--mut);font-size:10px;background:rgba(15,25,50,.5);">Causa</th>'+
-      cols+
-      '</tr></thead><tbody>'+causesRows+'</tbody></table></div></div>'
-      : '');
+    return '<table style="width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap;">'+
+           '<thead>'+thRow+thRow2+'</thead><tbody>'+bodyRows+'</tbody></table>';
   }
 
-  // ── Build bar charts section ─────────────────────────────────────────────
-  function buildBarCharts(){
-    var chartIds = [];
-    var chartsHtml = '';
+  var zenvSkuHtml = section('🏷️','Envasado ZENV — Comparación por SKU','rgba(245,158,11,.1)',buildSkuTabla());
 
-    // Chart helper: horizontal bar comparison
-    function cmpChart(id, title, getVal, unit, lowerBetter){
-      var labels = data.map(function(d){return d.temp;});
-      var values = data.map(function(d){return getVal(d.d);});
-      chartIds.push({id:id,labels:labels,values:values,unit:unit,colors:T_COLORS.slice(0,data.length),lowerBetter:lowerBetter});
-      return '<div style="background:rgba(15,25,50,.6);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;">'+
-             '<div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:8px;">'+title+'</div>'+
-             '<div style="height:120px;position:relative;"><canvas id="'+id+'"></canvas></div></div>';
-    }
+  // ═══════════════════════════════════════════════════════════════════════
+  // SECCIÓN 6 — ZENV: Causas TP Plan / NoPlan
+  // ═══════════════════════════════════════════════════════════════════════
+  var zenvTpHtml = buildTpCausas('zenv');
 
-    chartsHtml =
-      '<div style="margin-bottom:20px;">'+
-      '<div style="font-size:11px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">📈 Gráficos Comparativos</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">'+
-      cmpChart('cmpCh1','Kgs Ingresados ZCIQ',function(d){return d.zciq.kgIn;},'kg',false)+
-      cmpChart('cmpCh2','Rendimiento IQF %',function(d){return d.zciq.rend>0?parseFloat(d.zciq.rend.toFixed(1)):0;},'%',false)+
-      cmpChart('cmpCh3','OEE ZCIQ %',function(d){return d.zciq.oee>0?parseFloat(d.zciq.oee.toFixed(1)):0;},'%',false)+
-      cmpChart('cmpCh4','TP No Planificado ZCIQ',function(d){return d.zciq.tNoPl;},'min',true)+
-      cmpChart('cmpCh5','Cajas Producidas ZENV',function(d){return d.zenv.cajas;},'cajas',false)+
-      cmpChart('cmpCh6','Cumplimiento Prog. ZENV',function(d){return d.zenv.cumpl!=null?parseFloat(d.zenv.cumpl.toFixed(1)):0;},'%',false)+
-      '</div></div>';
-    return {html:chartsHtml, chartIds:chartIds};
-  }
-
-  // ── Render everything ────────────────────────────────────────────────────
-  var chartInfo = buildBarCharts();
+  // ── Render ───────────────────────────────────────────────────────────────
   body.innerHTML =
     '<div style="font-size:11px;color:var(--mut);margin-bottom:14px;">'+
-    '📅 Comparando <strong style="color:var(--txt);">'+temps.length+'</strong> temporada'+
-    (temps.length>1?'s':'')+': '+
-    temps.map(function(t,i){
-      return '<span style="color:'+T_COLORS[i]+';font-weight:700;">'+t+'</span>';
-    }).join(' vs ')+
+    '📅 Comparando '+
+    temps.map(function(temp,i){
+      return '<span style="color:'+TC[i]+';font-weight:700;">'+temp+'</span>';
+    }).join(' <span style="color:var(--mut);">vs</span> ')+
     '</div>'+
-    chartInfo.html+
-    buildAreaSection('zciq','🔵 Selección ZCIQ','🔵')+
-    buildAreaSection('zenv','📦 Envasado ZENV','📦');
-
-  // Render charts
-  setTimeout(function(){
-    chartInfo.chartIds.forEach(function(c){
-      var el = document.getElementById(c.id);
-      if(!el) return;
-      var max = Math.max.apply(null, c.values.filter(function(v){return v>0;})) * 1.2 || 1;
-      // Color: highlight best
-      var bestIdx = c.lowerBetter
-        ? c.values.indexOf(Math.min.apply(null, c.values.filter(function(v){return v>0;})))
-        : c.values.indexOf(Math.max.apply(null, c.values.filter(function(v){return v>0;})));
-      var bgs = c.colors.map(function(col,i){ return i===bestIdx ? col : col+'88'; });
-
-      _CMP_CHARTS[c.id] = new Chart(el, {
-        type:'bar',
-        data:{
-          labels:c.labels,
-          datasets:[{data:c.values, backgroundColor:bgs, borderColor:c.colors,
-                     borderWidth:2, borderRadius:6}]
-        },
-        options:{
-          responsive:true, maintainAspectRatio:false, indexAxis:'x',
-          plugins:{legend:{display:false},
-            tooltip:{callbacks:{label:function(ctx){return ' '+ctx.parsed.y+' '+c.unit;}}}
-          },
-          scales:{
-            x:{ticks:{color:'rgba(255,255,255,.7)',font:{size:9}},grid:{display:false}},
-            y:{ticks:{color:'rgba(255,255,255,.5)',font:{size:8},
-                callback:function(v){return v>=1000?Math.round(v/1000)+'k':v;}},
-               grid:{color:'rgba(255,255,255,.05)'},max:max}
-          }
-        }
-      });
-    });
-  }, 50);
+    zciqKpisHtml+
+    zciqLinEspHtml+
+    zciqTpHtml+
+    zenvKpisHtml+
+    zenvSkuHtml+
+    zenvTpHtml;
 }
+
 
 /* INIT */
 Chart.defaults.color = 'rgba(255,255,255,0.7)';
