@@ -5607,9 +5607,12 @@ function mkDon(id, labels, data, colors, title){
 var _TEMP_ACTIVA = '';
 
 function getTemporada(fecha){
-  var p=fecha.split('-'); var año=+p[0]; var mes=+p[1];
-  var t=mes>=7?año:año-1;
-  return (String(t).slice(-2))+'-'+(String(t+1).slice(-2));
+  // Format: "TEMPORADA 25/26" — season starts Aug (mes>=8)
+  try{
+    var p=fecha.split('-'); var año=+p[0]; var mes=+p[1];
+    var t=mes>=8?año:año-1;
+    return 'TEMPORADA '+String(t).slice(-2)+'/'+String(t+1).slice(-2);
+  }catch(e){return '';}
 }
 
 function getTemps(){
@@ -5626,7 +5629,7 @@ function populateTempSelect(selId){
   sel.innerHTML='<option value="">Todas</option>';
   getTemps().forEach(function(temp){
     var o=document.createElement('option');
-    o.value=temp; o.text='T '+temp;
+    o.value=temp; o.text=temp;
     if(temp===_TEMP_ACTIVA) o.selected=true;
     sel.appendChild(o);
   });
