@@ -555,15 +555,15 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
   <!-- Row 2: tabs -->
   <div class="nav-tabs-row">
     <div class="tabs" id="mainTabs">
-      <button class="tab" id="tb0" onclick="goTo('s0',this)"><span class="tab-icon">🏠</span><span class="tab-txt"></span></button>
-      <button class="tab on" id="tb2" onclick="goTo('s2',this)"><span class="tab-icon">🔵</span><span class="tab-txt"> Selección</span></button>
-      <button class="tab" id="tb3"    onclick="goTo('s3',this)"><span class="tab-icon">📦</span><span class="tab-txt"> Envasado</span></button>
-      <button class="tab" id="tbtp2"  onclick="goTo('tp2',this)"><span class="tab-icon">⏱️</span><span class="tab-txt"> TP Selec.</span></button>
-      <button class="tab" id="tbtp3"  onclick="goTo('tp3',this)"><span class="tab-icon">⏱️</span><span class="tab-txt"> TP Env.</span></button>
+      <button class="tab on" id="tb0"   onclick="goTo('s0',this)"><span class="tab-icon">🏠</span><span class="tab-txt"></span></button>
+      <button class="tab" id="tbcmp" onclick="goTo('cmp',this)"><span class="tab-icon">📊</span><span class="tab-txt"> Comparar</span></button>
       <button class="tab" id="tbre"   onclick="goTo('re',this)"><span class="tab-icon">📋</span><span class="tab-txt"> Resumen</span></button>
+      <button class="tab" id="tb2"   onclick="goTo('s2',this)"><span class="tab-icon">🔵</span><span class="tab-txt"> Selección</span></button>
+      <button class="tab" id="tb3"   onclick="goTo('s3',this)"><span class="tab-icon">📦</span><span class="tab-txt"> Envasado</span></button>
+      <button class="tab" id="tbtp2" onclick="goTo('tp2',this)"><span class="tab-icon">⏱️</span><span class="tab-txt"> TP Selec.</span></button>
+      <button class="tab" id="tbtp3" onclick="goTo('tp3',this)"><span class="tab-icon">⏱️</span><span class="tab-txt"> TP Env.</span></button>
+      <button class="tab" id="tbseg" onclick="goTo('seg',this)"><span class="tab-icon">🦺</span><span class="tab-txt"> Seguridad</span></button>
       <button class="tab" id="tbcost" onclick="goTo('cost',this)"><span class="tab-icon">💰</span><span class="tab-txt"> Costos</span></button>
-      <button class="tab" id="tbseg" onclick="goTo('seg',this)"><span class="tab-icon">🦺</span><span class="tab-txt"></span></button>
-      <button class="tab" id="tbcmp" onclick="goTo('cmp',this)"><span class="tab-icon">📊</span><span class="tab-txt">Comparar</span></button>
     </div>
   </div>
 </nav>
@@ -9898,8 +9898,34 @@ function updateCmp(){
   });
   zciqRows += mrow('🕐 T.Disponible','T.Teórico − T.Perdido',tdispTxts,data.map(function(){return 'var(--txt)';}),markBest(data.map(function(d){return d.d.zciq.tTeo-d.d.zciq.tPerd;}),false),ri++);
 
+  // Métricas normalizadas ZCIQ (comparación real entre temporadas con T.Teórico distinto)
+  var dispPctTxts = data.map(function(d){
+    return d.d.zciq.tTeo>0?(d.d.zciq.tTeo-d.d.zciq.tPerd)/d.d.zciq.tTeo*100:0;
+  });
+  var dispPctColor = data.map(function(d){
+    var v=d.d.zciq.tTeo>0?(d.d.zciq.tTeo-d.d.zciq.tPerd)/d.d.zciq.tTeo*100:0;
+    return v>=88?CC.grn:v>=80?CC.amb:CC.red;
+  });
+  zciqRows += mrow('📊 % T.Disponible / Teórico','(normalizado) meta ≥ 88%',
+    dispPctTxts.map(function(v){return v>0?v.toFixed(1)+'%':'—';}),
+    dispPctColor, markBest(dispPctTxts,false), ri++);
+
+  var kgHDisp = data.map(function(d){
+    var td=d.d.zciq.tTeo-d.d.zciq.tPerd;
+    return td>0?d.d.zciq.kgIn/(td/60):0;
+  });
+  zciqRows += mrow('⚡ Kg Ing / Hora Disp.','productividad normalizada',
+    kgHDisp.map(function(v){return v>0?Math.round(v).toLocaleString('es-CL')+' kg/h':'—';}),
+    data.map(function(){return CC.cyn;}), markBest(kgHDisp,false), ri++);
+
   var tpTxts = data.map(function(d){return d.d.zciq.tPerd>0?Math.round(d.d.zciq.tPerd).toLocaleString('es-CL')+' min':'0';});
   zciqRows += mrow('⏱️ T.Perdido Total','minutos totales',tpTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zciq.tPerd;}),true),ri++);
+
+  // % TP Plan / NoPlan sobre T.Teórico
+  var plPctTxts = data.map(function(d){return d.d.zciq.tTeo>0?(d.d.zciq.tPlan/d.d.zciq.tTeo*100).toFixed(1)+'%':'—';});
+  zciqRows += mrow('✅ % TP Plan / Teórico','plan normalizado',plPctTxts,data.map(function(){return CC.grn;}),data.map(function(){return false;}),ri++);
+  var npPctTxts = data.map(function(d){return d.d.zciq.tTeo>0?(d.d.zciq.tNoPl/d.d.zciq.tTeo*100).toFixed(1)+'%':'—';});
+  zciqRows += mrow('⚡ % TP NoPlan / Teórico','no plan normalizado',npPctTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zciq.tNoPl/Math.max(1,d.d.zciq.tTeo)*100;}),true),ri++);
   var plTxts = data.map(function(d){return d.d.zciq.tPlan>0?Math.round(d.d.zciq.tPlan).toLocaleString('es-CL')+' min':'0';});
   zciqRows += mrow('✅ TP Planificado','paros programados',plTxts,data.map(function(){return CC.grn;}),markBest(data.map(function(d){return d.d.zciq.tPlan;}),true),ri++);
   var npTxts = data.map(function(d){return d.d.zciq.tNoPl>0?Math.round(d.d.zciq.tNoPl).toLocaleString('es-CL')+' min':'0';});
@@ -10082,8 +10108,33 @@ function updateCmp(){
   });
   zenvRows += mrow('🕐 T.Disponible','T.Teórico − T.Perdido',zenvTdispTxts,data.map(function(){return 'var(--txt)';}),markBest(data.map(function(d){return d.d.zenv.tTeo-d.d.zenv.tPerd;}),false),ri++);
 
+  // Métricas normalizadas ZENV
+  var zenvDispPct = data.map(function(d){
+    return d.d.zenv.tTeo>0?(d.d.zenv.tTeo-d.d.zenv.tPerd)/d.d.zenv.tTeo*100:0;
+  });
+  var zenvDispPctColor = data.map(function(d){
+    var v=d.d.zenv.tTeo>0?(d.d.zenv.tTeo-d.d.zenv.tPerd)/d.d.zenv.tTeo*100:0;
+    return v>=88?CC.grn:v>=80?CC.amb:CC.red;
+  });
+  zenvRows += mrow('📊 % T.Disponible / Teórico','(normalizado) meta ≥ 88%',
+    zenvDispPct.map(function(v){return v>0?v.toFixed(1)+'%':'—';}),
+    zenvDispPctColor, markBest(zenvDispPct,false), ri++);
+
+  var cajHDisp = data.map(function(d){
+    var td=d.d.zenv.tTeo-d.d.zenv.tPerd;
+    return td>0?d.d.zenv.cajas/(td/60):0;
+  });
+  zenvRows += mrow('📦 Cajas / Hora Disp.','productividad normalizada',
+    cajHDisp.map(function(v){return v>0?v.toFixed(1)+' caj/h':'—';}),
+    data.map(function(){return CC.cyn;}), markBest(cajHDisp,false), ri++);
+
   var zenpTxts = data.map(function(d){return d.d.zenv.tPerd>0?Math.round(d.d.zenv.tPerd).toLocaleString('es-CL')+' min':'0';});
   zenvRows += mrow('⏱️ T.Perdido Total','minutos totales',zenpTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zenv.tPerd;}),true),ri++);
+
+  var zplPctTxts = data.map(function(d){return d.d.zenv.tTeo>0?(d.d.zenv.tPlan/d.d.zenv.tTeo*100).toFixed(1)+'%':'—';});
+  zenvRows += mrow('✅ % TP Plan / Teórico','plan normalizado',zplPctTxts,data.map(function(){return CC.grn;}),data.map(function(){return false;}),ri++);
+  var znpPctTxts = data.map(function(d){return d.d.zenv.tTeo>0?(d.d.zenv.tNoPl/d.d.zenv.tTeo*100).toFixed(1)+'%':'—';});
+  zenvRows += mrow('⚡ % TP NoPlan / Teórico','no plan normalizado',znpPctTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zenv.tNoPl/Math.max(1,d.d.zenv.tTeo)*100;}),true),ri++);
 
   var zplTxts = data.map(function(d){return d.d.zenv.tPlan>0?Math.round(d.d.zenv.tPlan).toLocaleString('es-CL')+' min':'0';});
   zenvRows += mrow('✅ TP Planificado','paros programados ZENV',zplTxts,data.map(function(){return CC.grn;}),markBest(data.map(function(d){return d.d.zenv.tPlan;}),true),ri++);
@@ -10169,6 +10220,66 @@ function updateCmp(){
   var zenvTpHtml = buildTpCausas('zenv');
 
   // ── Render ───────────────────────────────────────────────────────────────
+  // ── Generate analysis comments ─────────────────────────────────────────
+  function buildAnalysis(areaKey){
+    var lines = [];
+    var d0 = data[0].d[areaKey]; // first temp as baseline
+
+    // Best temp for key normalized metrics
+    var bestDispPct = data.reduce(function(best,d){
+      var v=(d.d[areaKey].tTeo-d.d[areaKey].tPerd)/Math.max(1,d.d[areaKey].tTeo)*100;
+      return v > best.v ? {v:v,temp:d.temp} : best;
+    },{v:0,temp:''});
+
+    var bestProd = areaKey==='zciq'
+      ? data.reduce(function(best,d){
+          var td=d.d.zciq.tTeo-d.d.zciq.tPerd;
+          var v=td>0?d.d.zciq.kgIn/(td/60):0;
+          return v>best.v?{v:v,temp:d.temp}:best;
+        },{v:0,temp:''})
+      : data.reduce(function(best,d){
+          var td=d.d.zenv.tTeo-d.d.zenv.tPerd;
+          var v=td>0?d.d.zenv.cajas/(td/60):0;
+          return v>best.v?{v:v,temp:d.temp}:best;
+        },{v:0,temp:''});
+
+    var bestNoPlanPct = data.reduce(function(best,d){
+      var v=d.d[areaKey].tNoPl/Math.max(1,d.d[areaKey].tTeo)*100;
+      return v < best.v ? {v:v,temp:d.temp} : best;
+    },{v:999,temp:''});
+
+    // Key insight: variation in T.Teórico across temps
+    var tTeoVals = data.map(function(d){return d.d[areaKey].tTeo;});
+    var tTeoMin  = Math.min.apply(null,tTeoVals);
+    var tTeoMax  = Math.max.apply(null,tTeoVals);
+    var tTeoVar  = tTeoMin>0?((tTeoMax-tTeoMin)/tTeoMin*100):0;
+
+    lines.push('⏱️ <strong>T.Teórico varía '+tTeoVar.toFixed(0)+'%</strong> entre temporadas'+
+      (tTeoVar>20?' — los valores absolutos no son comparables directamente; usar métricas normalizadas (%).':''+
+      (tTeoVar>5?' — diferencia moderada; los % normalizados permiten comparación real.':' — tiempos similares, comparación directa válida.')));
+
+    if(bestDispPct.temp)
+      lines.push('📊 <strong>Mayor eficiencia de tiempo:</strong> '+bestDispPct.temp+
+        ' con '+bestDispPct.v.toFixed(1)+'% de tiempo disponible sobre el teórico.');
+
+    if(bestProd.temp){
+      var prodLabel = areaKey==='zciq' ? bestProd.v.toFixed(0)+' kg/h' : bestProd.v.toFixed(1)+' caj/h';
+      lines.push('🚀 <strong>Mayor productividad normalizada:</strong> '+bestProd.temp+
+        ' — '+prodLabel+' sobre tiempo disponible real.');
+    }
+
+    if(bestNoPlanPct.temp && bestNoPlanPct.v<999)
+      lines.push('⚡ <strong>Menor % TP No Planificado:</strong> '+bestNoPlanPct.temp+
+        ' con solo '+bestNoPlanPct.v.toFixed(1)+'% del teórico en paros imprevistos.');
+
+    return '<div style="margin-bottom:14px;background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);'+
+      'border-left:3px solid var(--acc);border-radius:10px;padding:12px 14px;">'+
+      '<div style="font-size:10px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">'+
+      '💡 Análisis Comparativo</div>'+
+      lines.map(function(l){return '<div style="font-size:11px;color:var(--txt);margin-bottom:5px;line-height:1.5;">'+l+'</div>';}).join('')+
+      '</div>';
+  }
+
   body.innerHTML =
     '<div style="font-size:11px;color:var(--mut);margin-bottom:14px;">'+
     '📅 Comparando '+
@@ -10176,9 +10287,11 @@ function updateCmp(){
       return '<span style="color:'+TC[i]+';font-weight:700;">'+temp+'</span>';
     }).join(' <span style="color:var(--mut);">vs</span> ')+
     '</div>'+
+    buildAnalysis('zciq')+
     zciqKpisHtml+
     zciqLinEspHtml+
     zciqTpHtml+
+    buildAnalysis('zenv')+
     zenvKpisHtml+
     zenvSkuHtml+
     zenvTpHtml;
