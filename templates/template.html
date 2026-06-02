@@ -5625,25 +5625,28 @@ function getTemps(){
 
 function populateTempSelect(selId){
   var sel=document.getElementById(selId); if(!sel)return;
-  var cur=sel.value;
+  var cur=_TEMP_ACTIVA||sel.value;
   sel.innerHTML='<option value="">Todas</option>';
   getTemps().forEach(function(temp){
     var o=document.createElement('option');
     o.value=temp; o.text=temp;
-    if(temp===_TEMP_ACTIVA) o.selected=true;
     sel.appendChild(o);
   });
-  if(cur) sel.value=cur;
+  // Set value after all options are added
+  sel.value=cur||'';
 }
 
 function initAllTempSelects(){
+  var temps=getTemps();
+  // Auto-select if only one temporada (before populating so option shows selected)
+  if(temps.length===1) _TEMP_ACTIVA=temps[0];
   // Populate all temporada selects in all fbars
   ['s2','s3','tp2','tp3','re','seg'].forEach(function(pfx){
     populateTempSelect(pfx+'Temp');
+    // Explicitly set the select value after populating
+    var sel=document.getElementById(pfx+'Temp');
+    if(sel && _TEMP_ACTIVA) sel.value=_TEMP_ACTIVA;
   });
-  // Auto-select if only one temporada
-  var temps=getTemps();
-  if(temps.length===1) _TEMP_ACTIVA=temps[0];
 }
 
 function onTempChange(pfx){
