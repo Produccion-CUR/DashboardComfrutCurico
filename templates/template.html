@@ -9889,9 +9889,14 @@ function updateCmp(){
   zciqRows += mrow('⚙️ OEE Disponibilidad','meta ≥ 85%',oeeTxts,oeeColor,markBest(oeeVals,false),ri++);
 
   // TP Total / Plan / NoPlan
-  // Tiempo Disponible (tTeo)
-  var tdispTxts = data.map(function(d){return d.d.zciq.tTeo>0?Math.round(d.d.zciq.tTeo).toLocaleString('es-CL')+' min':'—';});
-  zciqRows += mrow('🕐 Tiempo Disponible','minutos disponibles totales',tdispTxts,data.map(function(){return 'var(--txt)';}),markBest(data.map(function(d){return d.d.zciq.tTeo;}),false),ri++);
+  // T.Teórico y T.Disponible ZCIQ
+  var tTeoZciqTxts = data.map(function(d){return d.d.zciq.tTeo>0?Math.round(d.d.zciq.tTeo).toLocaleString('es-CL')+' min':'—';});
+  zciqRows += mrow('🕓 T.Teórico','T.Disponible + T.Perdido',tTeoZciqTxts,data.map(function(){return 'var(--mut)';}),markBest(data.map(function(d){return d.d.zciq.tTeo;}),false),ri++);
+  var tdispTxts = data.map(function(d){
+    var v=d.d.zciq.tTeo-d.d.zciq.tPerd;
+    return v>0?Math.round(v).toLocaleString('es-CL')+' min':'—';
+  });
+  zciqRows += mrow('🕐 T.Disponible','T.Teórico − T.Perdido',tdispTxts,data.map(function(){return 'var(--txt)';}),markBest(data.map(function(d){return d.d.zciq.tTeo-d.d.zciq.tPerd;}),false),ri++);
 
   var tpTxts = data.map(function(d){return d.d.zciq.tPerd>0?Math.round(d.d.zciq.tPerd).toLocaleString('es-CL')+' min':'0';});
   zciqRows += mrow('⏱️ T.Perdido Total','minutos totales',tpTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zciq.tPerd;}),true),ri++);
@@ -10068,9 +10073,14 @@ function updateCmp(){
   var mbColor= data.map(function(d){var v=d.d.zenv.merBol;return v===null?'var(--mut)':v<=1?CC.grn:v<=2?CC.amb:CC.red;});
   zenvRows += mrow('🗑️ Merma Bolsas','consumo vs teórico',mbTxts,mbColor,markBest(data.map(function(d){return d.d.zenv.merBol;}),true),ri++);
 
-  // Tiempo Disponible ZENV
-  var zenvTdispTxts = data.map(function(d){return d.d.zenv.tTeo>0?Math.round(d.d.zenv.tTeo).toLocaleString('es-CL')+' min':'—';});
-  zenvRows += mrow('🕐 Tiempo Disponible','minutos disponibles totales',zenvTdispTxts,data.map(function(){return 'var(--txt)';}),markBest(data.map(function(d){return d.d.zenv.tTeo;}),false),ri++);
+  // T.Teórico y T.Disponible ZENV
+  var tTeoZenvTxts = data.map(function(d){return d.d.zenv.tTeo>0?Math.round(d.d.zenv.tTeo).toLocaleString('es-CL')+' min':'—';});
+  zenvRows += mrow('🕓 T.Teórico','T.Disponible + T.Perdido',tTeoZenvTxts,data.map(function(){return 'var(--mut)';}),markBest(data.map(function(d){return d.d.zenv.tTeo;}),false),ri++);
+  var zenvTdispTxts = data.map(function(d){
+    var v=d.d.zenv.tTeo-d.d.zenv.tPerd;
+    return v>0?Math.round(v).toLocaleString('es-CL')+' min':'—';
+  });
+  zenvRows += mrow('🕐 T.Disponible','T.Teórico − T.Perdido',zenvTdispTxts,data.map(function(){return 'var(--txt)';}),markBest(data.map(function(d){return d.d.zenv.tTeo-d.d.zenv.tPerd;}),false),ri++);
 
   var zenpTxts = data.map(function(d){return d.d.zenv.tPerd>0?Math.round(d.d.zenv.tPerd).toLocaleString('es-CL')+' min':'0';});
   zenvRows += mrow('⏱️ T.Perdido Total','minutos totales',zenpTxts,data.map(function(){return CC.red;}),markBest(data.map(function(d){return d.d.zenv.tPerd;}),true),ri++);
@@ -10123,6 +10133,8 @@ function updateCmp(){
         var s = (data[i].d.zenv.skuMap||{})[sku];
         if(!s||s.cajas===0){
           return '<td style="padding:7px 8px;text-align:right;color:var(--mut);border-left:2px solid '+TC[i]+'80;">—</td>'+
+                 '<td style="padding:7px 8px;text-align:right;color:var(--mut);">—</td>'+
+                 '<td style="padding:7px 8px;text-align:right;color:var(--mut);">—</td>'+
                  '<td style="padding:7px 8px;text-align:right;color:var(--mut);">—</td>'+
                  '<td style="padding:7px 8px;text-align:right;color:var(--mut);">—</td>';
         }
