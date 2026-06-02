@@ -48,6 +48,15 @@ def fechastr(x):
     except: return ''
 
 ZCIQ_L = ['S_L01','S_L03','S_L04','S_L05','S_LMANCU','S_MANUAL']
+
+def get_temporada(fecha):
+    """TEMPORADA 25/26: Aug-Jul season. Aug 2025 → Jul 2026 = TEMPORADA 25/26"""
+    try:
+        año = int(fecha[:4]); mes = int(fecha[5:7])
+        t = año if mes >= 8 else año - 1
+        return f"TEMPORADA {str(t)[-2:]}/{str(t+1)[-2:]}"
+    except:
+        return ''
 ZENV_L = ['S_ENV1']
 
 xl = pd.ExcelFile(EXCEL)
@@ -79,6 +88,7 @@ for _, r in df_ap.iterrows():
         'año': int(p[0]), 'mes': int(p[1]), 'dia': int(p[2]),
         'semana': int(n(r['Semana'])),
         'turno':  int(n(r['Turno'])),
+        'temporada': get_temporada(fecha),
         'linea': linea, 'area': area,
         'especie': s(r['Especie']),
         'sku':     s(r['Desc.Material']),
@@ -166,7 +176,7 @@ for _, r in df_tp.iterrows():
     perdidas.append({
         'fecha': fecha,
         'año': int(p[0]), 'mes': int(p[1]), 'dia': int(p[2]),
-        'semana': sem, 'linea': linea, 'area': area,
+        'semana': sem, 'linea': linea, 'area': area, 'temporada': get_temporada(fecha),
         'falla':     s(r.get('Desc.Falla', '')),
         'categoria': s(r.get('Desc.Clasifi. del Paro', '')),
         'tipo_paro': s(r.get('Tipo de Paro', '')),
@@ -188,7 +198,7 @@ if 'Seguridad' in xl.sheet_names:
         sem = get_sem(fecha, str(r['Semana']))
         seg.append({
             'fecha': fecha, 'año': int(p[0]), 'mes': int(p[1]), 'dia': int(p[2]),
-            'semana': sem, 'rut': s(r['Rut']), 'turno': s(r['Turno']),
+            'semana': sem, 'temporada': get_temporada(fecha), 'rut': s(r['Rut']), 'turno': s(r['Turno']),
             'supervisor': s(r['Supervisor']), 'linea': s(r['Linea']),
             'cantidad': int(n(r['Cantidad'])), 'nombre': s(r['Nombre']),
             'lesion':   s(r['Lesión o situación ']),
