@@ -9644,6 +9644,7 @@ try{
   setupCascadeTP('tp2','MS_ZCIQ','SD_ZCIQ',function(){updateAreaTP('tp2','ZCIQ',ZCIQ_L);});
   setupCascadeTP('tp3','MS_ZENV','SD_ZENV',function(){updateAreaTP('tp3','ZENV',ZENV_L);});
 }catch(e){console.warn('TP init:',e);}
+initAllTempSelects();
 goTo('s0', el('tb0'));
 // Pre-load the first data screen (s2) after init
 setTimeout(function(){
