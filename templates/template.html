@@ -563,6 +563,7 @@ tbody td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.04);}
       <button class="tab" id="tbre"   onclick="goTo('re',this)"><span class="tab-icon">📋</span><span class="tab-txt"> Resumen</span></button>
       <button class="tab" id="tbcost" onclick="goTo('cost',this)"><span class="tab-icon">💰</span><span class="tab-txt"> Costos</span></button>
       <button class="tab" id="tbseg" onclick="goTo('seg',this)"><span class="tab-icon">🦺</span><span class="tab-txt"></span></button>
+      <button class="tab" id="tbcmp" onclick="goTo('cmp',this)"><span class="tab-icon">📊</span><span class="tab-txt">Comparar</span></button>
     </div>
   </div>
 </nav>
@@ -1375,6 +1376,7 @@ function goTo(id,btn){
     if(id==='re')  updateResumen();
     if(id==='cost') updateCostos();
     if(id==='seg')  updateSeg();
+    if(id==='cmp')  {initCmpSelects();updateCmp();}
   },80);
 }
 
@@ -9631,6 +9633,403 @@ function mkDon(id, labels, data, colors, title){
 
 
 
+
+/* ══════════════════════════════════════════════════════════════
+   COMPARAR TEMPORADAS
+══════════════════════════════════════════════════════════════ */
+
+function initCmpSelects(){
+  var temps = getTemps();
+  ['cmpT1','cmpT2','cmpT3'].forEach(function(id, i){
+    var sel = document.getElementById(id);
+    if(!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = i===2
+      ? '<option value="">— Sin comparar —</option>'
+      : '<option value="">— Elegir —</option>';
+    temps.forEach(function(temp){
+      var o = document.createElement('option');
+      o.value = temp; o.text = temp;
+      sel.appendChild(o);
+    });
+    if(cur) sel.value = cur;
+    // Auto-assign if only 2 seasons
+    if(temps.length >= 1 && i===0 && !sel.value) sel.value = temps[0]||'';
+    if(temps.length >= 2 && i===1 && !sel.value) sel.value = temps[1]||'';
+  });
+}
+
+function calcTempData(temp){
+  // Returns a data object for a given temporada string
+  var prod = PROD.filter(function(r){
+    var rt = r.temporada||(r.fecha?getTemporada(r.fecha):'');
+    return rt === temp;
+  });
+  var pd = PD.filter(function(r){
+    var rt = r.temporada||(r.fecha?getTemporada(r.fecha):'');
+    return rt === temp;
+  });
+  var td = TD.filter(function(r){
+    var rt = r.temporada||(r.fecha?getTemporada(r.fecha):'');
+    return rt === temp;
+  });
+
+  function areaData(areaName, lines){
+    var ap = prod.filter(function(r){return r.area===areaName;});
+    var apd= pd.filter(function(r){return lines.includes(r.linea);});
+    var atd= td.filter(function(r){return lines.includes(r.linea);});
+
+    var kgIn   = ap.reduce(function(a,r){return a+r.kg_ingresados;},0);
+    var iqf    = ap.reduce(function(a,r){return a+r.iqf_aprobado;},0);
+    var rend   = kgIn>0?(iqf/kgIn*100):0;
+    var cajas  = ap.reduce(function(a,r){return a+r.cajas;},0);
+    var ton    = ap.reduce(function(a,r){return a+r.ton_real;},0);
+    var tTeo   = atd.reduce(function(a,r){return a+r.minutos;},0);
+    var tEfec  = atd.reduce(function(a,r){return a+(r.efec_min||0);},0);
+    var tPerd  = apd.reduce(function(a,r){return a+r.minutos;},0);
+    var tPlan  = apd.filter(function(r){return r.tipo_paro==='Paro Planificado';}).reduce(function(a,r){return a+r.minutos;},0);
+    var tNoPl  = apd.filter(function(r){return r.tipo_paro==='Paro No Planificado';}).reduce(function(a,r){return a+r.minutos;},0);
+    var oee    = tTeo>0?((tEfec>0?tEfec:Math.max(0,tTeo-tPerd))/tTeo*100):0;
+    // Merma
+    var teoC=ap.reduce(function(a,r){return a+r.teo_cajas;},0);
+    var conC=ap.reduce(function(a,r){return a+r.con_cajas;},0);
+    var teoB=ap.reduce(function(a,r){return a+r.teo_bolsas;},0);
+    var conB=ap.reduce(function(a,r){return a+r.con_bolsas;},0);
+    var merCaj=teoC>0?((conC-teoC)/teoC*100):null;
+    var merBol=teoB>0?((conB-teoB)/teoB*100):null;
+    // BPM (ZENV only)
+    var bpmVals=ap.filter(function(r){return r.bpm_total>0;}).map(function(r){return r.bpm_total;});
+    var bpmProm=bpmVals.length>0?(bpmVals.reduce(function(a,b){return a+b;},0)/bpmVals.length):0;
+    // Cajas prog + cumplimiento
+    var matchedProg=PROG.filter(function(p){
+      return ap.some(function(r){return r.fecha===p.fecha&&(r.cod||'').trim()===(p.cod||'').trim()&&r.turno===p.turno;});
+    });
+    var cajasProg=matchedProg.reduce(function(a,p){return a+p.cajas_prog;},0);
+    var progKeys=new Set(matchedProg.map(function(p){return p.fecha+'|'+p.cod+'|'+p.turno;}));
+    var cajasConProg=ap.reduce(function(a,r){return a+(progKeys.has(r.fecha+'|'+(r.cod||'')+'|'+r.turno)?r.cajas:0);},0);
+    var cumpl=cajasProg>0?(cajasConProg/cajasProg*100):null;
+    // Top 3 causas TP
+    var fallaMap={};
+    apd.forEach(function(r){if(r.falla)fallaMap[r.falla]=(fallaMap[r.falla]||0)+r.minutos;});
+    var top3=Object.keys(fallaMap).sort(function(a,b){return fallaMap[b]-fallaMap[a];}).slice(0,3);
+
+    return {kgIn:kgIn,iqf:iqf,rend:rend,cajas:cajas,ton:ton,
+            oee:oee,tPerd:tPerd,tPlan:tPlan,tNoPl:tNoPl,evTP:apd.length,
+            merCaj:merCaj,merBol:merBol,bpmProm:bpmProm,
+            cajasProg:cajasProg,cumpl:cumpl,top3:top3,fallaMap:fallaMap};
+  }
+  return {
+    zciq: areaData('ZCIQ', ZCIQ_L),
+    zenv: areaData('ZENV', ZENV_L),
+    semanas: [...new Set(prod.map(function(r){return r.semana;}))].length,
+    fechas:  [...new Set(prod.map(function(r){return r.fecha;}))].length,
+  };
+}
+
+var _CMP_CHARTS = {};
+function updateCmp(){
+  var t1 = (document.getElementById('cmpT1')||{}).value||'';
+  var t2 = (document.getElementById('cmpT2')||{}).value||'';
+  var t3 = (document.getElementById('cmpT3')||{}).value||'';
+  var temps = [t1,t2,t3].filter(function(x){return x;});
+
+  var body = document.getElementById('cmpBody');
+  if(!body) return;
+
+  if(temps.length < 2){
+    body.innerHTML='<div style="text-align:center;padding:60px 20px;color:var(--mut);">'+
+      '<div style="font-size:40px;margin-bottom:12px;">📊</div>'+
+      '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">Selecciona al menos 2 temporadas</div>'+
+      '<div style="font-size:12px;">Elige en los selectores de arriba para comparar</div></div>';
+    return;
+  }
+
+  // Destroy old charts
+  Object.keys(_CMP_CHARTS).forEach(function(k){
+    try{_CMP_CHARTS[k].destroy();}catch(e){}
+  });
+  _CMP_CHARTS={};
+
+  // Compute data for each temporada
+  var data = temps.map(function(temp){ return {temp:temp, d:calcTempData(temp)}; });
+
+  // Color palette per temporada
+  var T_COLORS = ['#3b82f6','#22c55e','#f59e0b'];
+  var T_DARK   = ['rgba(59,130,246,.15)','rgba(34,197,94,.15)','rgba(245,158,11,.15)'];
+
+  function pct(v,dec){ return v!=null?v.toFixed(dec!=null?dec:1)+'%':'—'; }
+  function num(v,dec){ return v!=null&&v>0?fmtK(v):'—'; }
+  function minFmt(v){ return v>0?Math.round(v)+' min':'0'; }
+
+  // ── Metric row helper ───────────────────────────────────────────────────
+  function metricVal(v, fmt_fn, meta, thresh){
+    // thresh: {good: fn(v)->bool, warn: fn(v)->bool}
+    var txt = fmt_fn(v);
+    var color = 'var(--txt)';
+    if(thresh && v!=null){
+      if(thresh.good && thresh.good(v)) color = CC.grn;
+      else if(thresh.warn && thresh.warn(v)) color = CC.amb;
+      else if(thresh.bad) color = CC.red;
+    }
+    return {txt:txt, color:color};
+  }
+
+  // ── Build comparison table for an area ──────────────────────────────────
+  function buildAreaSection(areaKey, areaLabel, icon){
+    var isZCIQ = areaKey==='zciq';
+    var cols = data.map(function(d,i){
+      return '<th style="padding:10px 12px;text-align:center;background:'+T_DARK[i]+';'+
+             'border-bottom:3px solid '+T_COLORS[i]+';color:'+T_COLORS[i]+';font-size:11px;'+
+             'font-weight:800;min-width:120px;">'+d.temp+'</th>';
+    }).join('');
+
+    // Define metrics
+    var metrics = isZCIQ ? [
+      {
+        label:'🌿 Kgs Ingresados', icon:'',
+        vals: data.map(function(d){ return {v:d.d.zciq.kgIn, txt:fmt(d.d.zciq.kgIn), color:'var(--txt)'}; }),
+        sub: 'materia prima total'
+      },{
+        label:'❄️ Kgs IQF Aprobado', icon:'',
+        vals: data.map(function(d){ return {v:d.d.zciq.iqf, txt:fmt(d.d.zciq.iqf), color:'var(--acc)'}; }),
+        sub: 'producto terminado'
+      },{
+        label:'📊 Rendimiento IQF', icon:'',
+        vals: data.map(function(d){
+          var v=d.d.zciq.rend;
+          return {v:v, txt:v>0?v.toFixed(1)+'%':'—', color:v>=85?CC.grn:v>=75?CC.amb:CC.red};
+        }), sub: 'meta ≥ 85%'
+      },{
+        label:'⚙️ OEE (Disponibilidad)', icon:'',
+        vals: data.map(function(d){
+          var v=d.d.zciq.oee;
+          return {v:v, txt:v>0?v.toFixed(1)+'%':'—', color:v>=85?CC.grn:v>=70?CC.amb:CC.red};
+        }), sub: 'meta ≥ 85%'
+      },{
+        label:'⏱️ T. Perdido Total', icon:'',
+        vals: data.map(function(d){ return {v:d.d.zciq.tPerd, txt:minFmt(d.d.zciq.tPerd), color:CC.red}; }),
+        sub: 'minutos totales'
+      },{
+        label:'✅ TP Planificado', icon:'',
+        vals: data.map(function(d){ return {v:d.d.zciq.tPlan, txt:minFmt(d.d.zciq.tPlan), color:CC.grn}; }),
+        sub: 'min planificados'
+      },{
+        label:'⚡ TP No Planificado', icon:'',
+        vals: data.map(function(d){ return {v:d.d.zciq.tNoPl, txt:minFmt(d.d.zciq.tNoPl), color:CC.red}; }),
+        sub: 'min no planificados'
+      }
+    ] : [
+      {
+        label:'📦 Cajas Producidas', icon:'',
+        vals: data.map(function(d){ return {v:d.d.zenv.cajas, txt:fmt(d.d.zenv.cajas), color:CC.blu}; }),
+        sub: 'total envasado'
+      },{
+        label:'⚖️ Ton. Reales', icon:'',
+        vals: data.map(function(d){ return {v:d.d.zenv.ton, txt:d.d.zenv.ton>0?d.d.zenv.ton.toFixed(1)+' t':'—', color:'var(--txt)'}; }),
+        sub: 'kgs producción'
+      },{
+        label:'📋 Cajas Programadas', icon:'',
+        vals: data.map(function(d){ return {v:d.d.zenv.cajasProg, txt:d.d.zenv.cajasProg>0?fmt(d.d.zenv.cajasProg):'—', color:'var(--mut)'}; }),
+        sub: 'según programa'
+      },{
+        label:'🎯 Cumplimiento Prog.', icon:'',
+        vals: data.map(function(d){
+          var v=d.d.zenv.cumpl;
+          return {v:v, txt:v!=null?v.toFixed(1)+'%':'—', color:v===null?'var(--mut)':v>=100?CC.grn:v>=85?CC.amb:CC.red};
+        }), sub: 'cajas prod vs prog'
+      },{
+        label:'⚙️ OEE (Disponibilidad)', icon:'',
+        vals: data.map(function(d){
+          var v=d.d.zenv.oee;
+          return {v:v, txt:v>0?v.toFixed(1)+'%':'—', color:v>=85?CC.grn:v>=70?CC.amb:CC.red};
+        }), sub: 'meta ≥ 85%'
+      },{
+        label:'📈 BPM Promedio', icon:'',
+        vals: data.map(function(d){ var v=d.d.zenv.bpmProm; return {v:v, txt:v>0?v.toFixed(1):'—', color:CC.cyn}; }),
+        sub: 'bolsas/min promedio'
+      },{
+        label:'🗑️ Merma Cajas', icon:'',
+        vals: data.map(function(d){
+          var v=d.d.zenv.merCaj;
+          return {v:v, txt:v!=null?v.toFixed(1)+'%':'—', color:v===null?'var(--mut)':v<=1?CC.grn:v<=2?CC.amb:CC.red};
+        }), sub: 'consumo vs teórico'
+      },{
+        label:'🗑️ Merma Bolsas', icon:'',
+        vals: data.map(function(d){
+          var v=d.d.zenv.merBol;
+          return {v:v, txt:v!=null?v.toFixed(1)+'%':'—', color:v===null?'var(--mut)':v<=1?CC.grn:v<=2?CC.amb:CC.red};
+        }), sub: 'consumo vs teórico'
+      },{
+        label:'⏱️ T. Perdido Total', icon:'',
+        vals: data.map(function(d){ return {v:d.d.zenv.tPerd, txt:minFmt(d.d.zenv.tPerd), color:CC.red}; }),
+        sub: 'minutos totales'
+      }
+    ];
+
+    // Find best value for each metric (to highlight)
+    metrics.forEach(function(m){
+      // Determine if lower is better
+      var lowerBetter = m.label.indexOf('Perdido')>=0||m.label.indexOf('Merma')>=0||
+                        m.label.indexOf('No Plan')>=0;
+      var nums = m.vals.map(function(v){return v.v!=null?v.v:null;});
+      var valid = nums.filter(function(x){return x!=null&&x>0;});
+      if(valid.length < 2) return;
+      var best = lowerBetter ? Math.min.apply(null,valid) : Math.max.apply(null,valid);
+      m.vals.forEach(function(v,i){
+        if(v.v!=null && v.v===best && v.v!==0) m.vals[i].isBest=true;
+      });
+    });
+
+    // Build table
+    var rows = metrics.map(function(m, ri){
+      var bg = ri%2===0?'rgba(15,25,50,.3)':'transparent';
+      var cells = m.vals.map(function(v,ci){
+        var badge = v.isBest
+          ? '<span style="font-size:8px;background:'+T_COLORS[ci]+';color:#000;border-radius:4px;padding:1px 5px;margin-left:4px;font-weight:700;">MEJOR</span>'
+          : '';
+        return '<td style="padding:11px 12px;text-align:center;font-size:16px;font-weight:800;color:'+v.color+';border-bottom:1px solid rgba(255,255,255,.04);">'+
+               v.txt+badge+'</td>';
+      }).join('');
+      return '<tr style="background:'+bg+';">'+
+             '<td style="padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);">'+
+             '<div style="font-size:12px;font-weight:600;color:var(--txt);">'+m.label+'</div>'+
+             '<div style="font-size:9px;color:var(--mut);">'+m.sub+'</div></td>'+
+             cells+'</tr>';
+    }).join('');
+
+    // Top 3 TP causes comparison
+    var causesRows = '';
+    var allCauses = [];
+    data.forEach(function(d){
+      var fmap = areaKey==='zciq'?d.d.zciq.fallaMap:d.d.zenv.fallaMap;
+      Object.keys(fmap).forEach(function(f){ if(allCauses.indexOf(f)<0) allCauses.push(f); });
+    });
+    // Sort by max total across temps
+    allCauses.sort(function(a,b){
+      var totB=data.reduce(function(s,d){var m=areaKey==='zciq'?d.d.zciq.fallaMap:d.d.zenv.fallaMap; return s+(m[b]||0);},0);
+      var totA=data.reduce(function(s,d){var m=areaKey==='zciq'?d.d.zciq.fallaMap:d.d.zenv.fallaMap; return s+(m[a]||0);},0);
+      return totB-totA;
+    });
+    allCauses.slice(0,5).forEach(function(causa, ri){
+      var bg=ri%2===0?'rgba(15,25,50,.3)':'transparent';
+      var cells=data.map(function(d,ci){
+        var fmap=areaKey==='zciq'?d.d.zciq.fallaMap:d.d.zenv.fallaMap;
+        var min=fmap[causa]||0;
+        return '<td style="padding:8px 12px;text-align:center;font-size:13px;font-weight:700;color:'+
+               (min>0?CC.red:'var(--mut)')+';border-bottom:1px solid rgba(255,255,255,.04);">'+
+               (min>0?Math.round(min)+' min':'—')+'</td>';
+      }).join('');
+      causesRows+='<tr style="background:'+bg+';">'+
+        '<td style="padding:8px 14px;font-size:11px;color:var(--txt);border-bottom:1px solid rgba(255,255,255,.04);">'+
+        causa+'</td>'+cells+'</tr>';
+    });
+
+    return '<div style="margin-bottom:20px;">'+
+      // Area header
+      '<div style="background:rgba(8,13,28,.9);border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;margin-bottom:12px;">'+
+      '<div style="padding:12px 14px;background:rgba(59,130,246,.08);border-bottom:1px solid rgba(255,255,255,.07);">'+
+      '<span style="font-size:13px;font-weight:800;color:var(--acc);">'+icon+' '+areaLabel+'</span>'+
+      '</div>'+
+      '<div style="overflow-x:auto;">'+
+      '<table style="width:100%;border-collapse:collapse;min-width:320px;">'+
+      '<thead><tr>'+
+      '<th style="padding:10px 14px;text-align:left;color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.06em;background:rgba(15,25,50,.5);">Indicador</th>'+
+      cols+
+      '</tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
+      // Top causes
+      (causesRows ?
+      '<div style="background:rgba(8,13,28,.9);border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;">'+
+      '<div style="padding:10px 14px;background:rgba(239,68,68,.08);border-bottom:1px solid rgba(255,255,255,.07);">'+
+      '<span style="font-size:12px;font-weight:700;color:'+CC.red+';">🔴 Top 5 Causas Tiempo Perdido — '+areaLabel+'</span>'+
+      '</div>'+
+      '<div style="overflow-x:auto;">'+
+      '<table style="width:100%;border-collapse:collapse;min-width:320px;">'+
+      '<thead><tr>'+
+      '<th style="padding:8px 14px;text-align:left;color:var(--mut);font-size:10px;background:rgba(15,25,50,.5);">Causa</th>'+
+      cols+
+      '</tr></thead><tbody>'+causesRows+'</tbody></table></div></div>'
+      : '');
+  }
+
+  // ── Build bar charts section ─────────────────────────────────────────────
+  function buildBarCharts(){
+    var chartIds = [];
+    var chartsHtml = '';
+
+    // Chart helper: horizontal bar comparison
+    function cmpChart(id, title, getVal, unit, lowerBetter){
+      var labels = data.map(function(d){return d.temp;});
+      var values = data.map(function(d){return getVal(d.d);});
+      chartIds.push({id:id,labels:labels,values:values,unit:unit,colors:T_COLORS.slice(0,data.length),lowerBetter:lowerBetter});
+      return '<div style="background:rgba(15,25,50,.6);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;">'+
+             '<div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:8px;">'+title+'</div>'+
+             '<div style="height:120px;position:relative;"><canvas id="'+id+'"></canvas></div></div>';
+    }
+
+    chartsHtml =
+      '<div style="margin-bottom:20px;">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">📈 Gráficos Comparativos</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">'+
+      cmpChart('cmpCh1','Kgs Ingresados ZCIQ',function(d){return d.zciq.kgIn;},'kg',false)+
+      cmpChart('cmpCh2','Rendimiento IQF %',function(d){return d.zciq.rend>0?parseFloat(d.zciq.rend.toFixed(1)):0;},'%',false)+
+      cmpChart('cmpCh3','OEE ZCIQ %',function(d){return d.zciq.oee>0?parseFloat(d.zciq.oee.toFixed(1)):0;},'%',false)+
+      cmpChart('cmpCh4','TP No Planificado ZCIQ',function(d){return d.zciq.tNoPl;},'min',true)+
+      cmpChart('cmpCh5','Cajas Producidas ZENV',function(d){return d.zenv.cajas;},'cajas',false)+
+      cmpChart('cmpCh6','Cumplimiento Prog. ZENV',function(d){return d.zenv.cumpl!=null?parseFloat(d.zenv.cumpl.toFixed(1)):0;},'%',false)+
+      '</div></div>';
+    return {html:chartsHtml, chartIds:chartIds};
+  }
+
+  // ── Render everything ────────────────────────────────────────────────────
+  var chartInfo = buildBarCharts();
+  body.innerHTML =
+    '<div style="font-size:11px;color:var(--mut);margin-bottom:14px;">'+
+    '📅 Comparando <strong style="color:var(--txt);">'+temps.length+'</strong> temporada'+
+    (temps.length>1?'s':'')+': '+
+    temps.map(function(t,i){
+      return '<span style="color:'+T_COLORS[i]+';font-weight:700;">'+t+'</span>';
+    }).join(' vs ')+
+    '</div>'+
+    chartInfo.html+
+    buildAreaSection('zciq','🔵 Selección ZCIQ','🔵')+
+    buildAreaSection('zenv','📦 Envasado ZENV','📦');
+
+  // Render charts
+  setTimeout(function(){
+    chartInfo.chartIds.forEach(function(c){
+      var el = document.getElementById(c.id);
+      if(!el) return;
+      var max = Math.max.apply(null, c.values.filter(function(v){return v>0;})) * 1.2 || 1;
+      // Color: highlight best
+      var bestIdx = c.lowerBetter
+        ? c.values.indexOf(Math.min.apply(null, c.values.filter(function(v){return v>0;})))
+        : c.values.indexOf(Math.max.apply(null, c.values.filter(function(v){return v>0;})));
+      var bgs = c.colors.map(function(col,i){ return i===bestIdx ? col : col+'88'; });
+
+      _CMP_CHARTS[c.id] = new Chart(el, {
+        type:'bar',
+        data:{
+          labels:c.labels,
+          datasets:[{data:c.values, backgroundColor:bgs, borderColor:c.colors,
+                     borderWidth:2, borderRadius:6}]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:false, indexAxis:'x',
+          plugins:{legend:{display:false},
+            tooltip:{callbacks:{label:function(ctx){return ' '+ctx.parsed.y+' '+c.unit;}}}
+          },
+          scales:{
+            x:{ticks:{color:'rgba(255,255,255,.7)',font:{size:9}},grid:{display:false}},
+            y:{ticks:{color:'rgba(255,255,255,.5)',font:{size:8},
+                callback:function(v){return v>=1000?Math.round(v/1000)+'k':v;}},
+               grid:{color:'rgba(255,255,255,.05)'},max:max}
+          }
+        }
+      });
+    });
+  }, 50);
+}
+
 /* INIT */
 Chart.defaults.color = 'rgba(255,255,255,0.7)';
 Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
@@ -9651,5 +10050,38 @@ setTimeout(function(){
   try{ updateResumen(); }catch(e){}
 }, 300);
 </script>
+
+<!-- ═══ COMPARAR TEMPORADAS ═══════════════════════════════════════════════ -->
+<div class="scr" id="cmp">
+  <!-- Selector bar -->
+  <div style="padding:12px 14px;background:rgba(8,13,28,.95);border-bottom:1px solid rgba(255,255,255,.07);">
+    <div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">📊 Comparar Temporadas — elige 2 o 3</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <div style="flex:1;min-width:120px;">
+        <div style="font-size:9px;color:var(--mut);margin-bottom:4px;">Temporada 1</div>
+        <select id="cmpT1" onchange="updateCmp()" style="width:100%;background:rgba(15,25,50,.9);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--txt);padding:7px 10px;font-size:12px;"><option value="">— Elegir —</option></select>
+      </div>
+      <div style="flex:1;min-width:120px;">
+        <div style="font-size:9px;color:var(--mut);margin-bottom:4px;">Temporada 2</div>
+        <select id="cmpT2" onchange="updateCmp()" style="width:100%;background:rgba(15,25,50,.9);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--txt);padding:7px 10px;font-size:12px;"><option value="">— Elegir —</option></select>
+      </div>
+      <div style="flex:1;min-width:120px;">
+        <div style="font-size:9px;color:var(--mut);margin-bottom:4px;">Temporada 3 <span style="color:var(--mut);font-size:8px;">(opcional)</span></div>
+        <select id="cmpT3" onchange="updateCmp()" style="width:100%;background:rgba(15,25,50,.9);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--txt);padding:7px 10px;font-size:12px;"><option value="">— Sin comparar —</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content area -->
+  <div class="scr-body" style="overflow-y:auto;padding:12px 14px;">
+    <div id="cmpBody">
+      <div style="text-align:center;padding:60px 20px;color:var(--mut);">
+        <div style="font-size:40px;margin-bottom:12px;">📊</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Selecciona al menos 2 temporadas</div>
+        <div style="font-size:12px;">Elige en los selectores de arriba para comparar los indicadores</div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
