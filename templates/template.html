@@ -3125,6 +3125,7 @@ const fpTP=function(o){
 };
 const ftTP=function(o){
   return TD.filter(function(r){
+    if(_TEMP_ACTIVA){var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');if(rt!==_TEMP_ACTIVA)return false;}
     return (!o.año||r.año==o.año)&&(!o.mes||r.mes==o.mes)&&
       (!o.sem||r.semana==o.sem)&&(!o.dia||r.dia==o.dia)&&
       (!o.lines||o.lines.includes(r.linea));
@@ -3580,7 +3581,11 @@ function renderLineCharts(l,sub,teo,ids,pfx,tdFiltered){
   // tdFiltered = already-filtered TD (respects año/mes/sem filters), fallback to global per-line
   const tdSub=tdFiltered
     ? tdFiltered.filter(r=>r.linea===l)
-    : TD.filter(r=>r.linea===l);
+    : TD.filter(function(r){
+      if(r.linea!==l)return false;
+      if(_TEMP_ACTIVA){var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');if(rt!==_TEMP_ACTIVA)return false;}
+      return true;
+    });
   window._linePD=window._linePD||{};
   window._linePD[ids.p]=sub;
   window._linePDraw=window._linePDraw||{};
@@ -4130,6 +4135,7 @@ function runPDF(btn){
       return d>=weekMon&&d<=weekSun;
     }
     function filterR(r){
+      if(_TEMP_ACTIVA){var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');if(rt!==_TEMP_ACTIVA)return false;}
       if(filtA&&String(r.año)!==filtA)return false;
       if(filtS&&String(r.semana)!==filtS)return false;
       if(!filtA&&!filtS)return inWeek(r);
@@ -4478,6 +4484,7 @@ function updateResumen(){
   var filtA=selA?selA.value:'';
   var filtS=selS?selS.value:'';
   function filterR(r){
+    if(_TEMP_ACTIVA){var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');if(rt!==_TEMP_ACTIVA)return false;}
     if(filtA&&String(r.año)!==filtA)return false;
     if(filtS&&String(r.semana)!==filtS)return false;
     // No filter: use current ISO week number (same logic as dropdown)
@@ -7611,7 +7618,11 @@ function renderLineCharts(l,sub,teo,ids,pfx,tdFiltered){
   // tdFiltered = already-filtered TD (respects año/mes/sem filters), fallback to global per-line
   const tdSub=tdFiltered
     ? tdFiltered.filter(r=>r.linea===l)
-    : TD.filter(r=>r.linea===l);
+    : TD.filter(function(r){
+      if(r.linea!==l)return false;
+      if(_TEMP_ACTIVA){var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');if(rt!==_TEMP_ACTIVA)return false;}
+      return true;
+    });
   window._linePD=window._linePD||{};
   window._linePD[ids.p]=sub;
   window._linePDraw=window._linePDraw||{};
@@ -8161,6 +8172,7 @@ function runPDF(btn){
       return d>=weekMon&&d<=weekSun;
     }
     function filterR(r){
+      if(_TEMP_ACTIVA){var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');if(rt!==_TEMP_ACTIVA)return false;}
       if(filtA&&String(r.año)!==filtA)return false;
       if(filtS&&String(r.semana)!==filtS)return false;
       if(!filtA&&!filtS)return inWeek(r);
@@ -8509,6 +8521,7 @@ function updateResumen(){
   var filtA=selA?selA.value:'';
   var filtS=selS?selS.value:'';
   function filterR(r){
+    if(_TEMP_ACTIVA){var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');if(rt!==_TEMP_ACTIVA)return false;}
     if(filtA&&String(r.año)!==filtA)return false;
     if(filtS&&String(r.semana)!==filtS)return false;
     // No filter: use current ISO week number (same logic as dropdown)
