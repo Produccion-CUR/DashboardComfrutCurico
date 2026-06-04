@@ -10011,19 +10011,32 @@ function updateCmp(){
   function buildTpCausas(areaKey){
     var isPlan_list = [true, false];
     var html = '';
+    // Build obs pareto per falla per temp — keyed by temp+falla
+    var obsMap = {};
+    data.forEach(function(d, ti){
+      var allPD = PD.filter(function(r){
+        var rt=r.temporada||(r.fecha?getTemporada(r.fecha):'');
+        return rt===d.temp && (areaKey==='zciq'?ZCIQ_L.includes(r.linea):ZENV_L.includes(r.linea));
+      });
+      allPD.forEach(function(r){
+        if(!r.falla||!r.obs) return;
+        var key=ti+'|'+r.falla;
+        if(!obsMap[key]) obsMap[key]={};
+        obsMap[key][r.obs]=(obsMap[key][r.obs]||0)+r.minutos;
+      });
+    });
+
     isPlan_list.forEach(function(isPlan){
       var icon  = isPlan ? '✅' : '⚡';
       var label = isPlan ? 'Planificado' : 'No Planificado';
       var color = isPlan ? CC.grn : CC.red;
       var accent= isPlan ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)';
 
-      // Collect all causas across temps for this tipo
       var allCausas = [];
       data.forEach(function(d){
         var fmap = isPlan ? d.d[areaKey].fallaMapPlan : d.d[areaKey].fallaMapNoPlan;
         Object.keys(fmap||{}).forEach(function(f){ if(allCausas.indexOf(f)<0) allCausas.push(f); });
       });
-      // Sort by max total across temps
       allCausas.sort(function(a,b){
         var totB=data.reduce(function(s,d){var m=isPlan?d.d[areaKey].fallaMapPlan:d.d[areaKey].fallaMapNoPlan;return s+((m||{})[b]||0);},0);
         var totA=data.reduce(function(s,d){var m=isPlan?d.d[areaKey].fallaMapPlan:d.d[areaKey].fallaMapNoPlan;return s+((m||{})[a]||0);},0);
@@ -10032,29 +10045,110 @@ function updateCmp(){
       var top = allCausas.slice(0,8);
       if(!top.length) return;
 
+      // Unique id prefix for toggling
+      var idPfx = areaKey+'_'+(isPlan?'pl':'np')+'_';
+
       var rows = top.map(function(causa, ri2){
         var bg = ri2%2===0?'rgba(15,25,50,.35)':'transparent';
         var vals = data.map(function(d){
-          var fmap = isPlan?d.d[areaKey].fallaMapPlan:d.d[areaKey].fallaMapNoPlan;
+          var fmap=isPlan?d.d[areaKey].fallaMapPlan:d.d[areaKey].fallaMapNoPlan;
           return (fmap||{})[causa]||0;
         });
-        var bests = markBest(vals, true); // lower = better for TP
-        var cells = vals.map(function(v,i){
-          var badge = bests[i]&&v>0?
-            '<span style="font-size:8px;background:'+TC[i]+';color:#000;border-radius:3px;padding:1px 4px;margin-left:3px;font-weight:700;">✓</span>':'';
+        var bests = markBest(vals, true);
+        var rowId = idPfx+ri2;
+
+        // Min cells
+        var cells = vals.map(function(v,ci){
+          var badge = bests[ci]&&v>0?
+            '<span style="font-size:8px;background:'+TC[ci]+';color:#000;border-radius:3px;padding:1px 4px;margin-left:3px;font-weight:700;">✓</span>':'';
           return '<td style="padding:8px 12px;text-align:center;font-size:13px;font-weight:700;color:'+
                  (v>0?color:'var(--mut)')+';border-bottom:1px solid rgba(255,255,255,.04);">'+
-                 (v>0?Math.round(v)+' min':'—')+badge+'</td>';
+                 (v>0?Math.round(v).toLocaleString('es-CL')+' min':'—')+badge+'</td>';
         }).join('');
-        return '<tr style="background:'+bg+';">'+
-          '<td style="padding:8px 14px;font-size:11px;color:var(--txt);border-bottom:1px solid rgba(255,255,255,.04);">'+causa+'</td>'+
-          cells+'</tr>';
+
+        // Pareto detail rows per temp (shown when expanded)
+        var detailRows = '';
+        data.forEach(function(d, ti){
+          var key=ti+'|'+causa;
+          var obs=obsMap[key]||{};
+          var obsSorted=Object.keys(obs).sort(function(a,b){return obs[b]-obs[a];});
+          if(!obsSorted.length) return;
+          var total=Object.values(obs).reduce(function(a,b){return a+b;},0);
+          var cum=0;
+          detailRows+='<tr style="background:rgba(5,10,25,.6);"><td colspan="'+(1+data.length)+
+            '" style="padding:6px 14px 2px;font-size:9px;font-weight:800;color:'+TC[ti]+
+            ';text-transform:uppercase;letter-spacing:.06em;">'+
+            '↳ Pareto observaciones — '+d.temp+'</td></tr>';
+          // Bar + label rows
+          var crossed80=false, prevCum=0;
+            var paretoRows = obsSorted.slice(0,10).map(function(obs_lbl, oi){
+            prevCum=cum;
+            cum += obs[obs_lbl];
+            var pct = total>0?(obs[obs_lbl]/total*100):0;
+            var cpct= total>0?(cum/total*100):0;
+            var barW= Math.round(pct);
+            var divider='';
+            if(!crossed80 && prevCum<80 && cpct>=80 && oi>0){
+              crossed80=true;
+              divider='<tr><td colspan="'+(1+data.length)+'" style="padding:3px 14px;">'+
+                '<div style="display:flex;align-items:center;gap:6px;">'+
+                '<div style="flex:1;border-top:2px dashed rgba(245,158,11,.7);"></div>'+
+                '<span style="font-size:9px;font-weight:800;color:#f59e0b;padding:1px 7px;'+
+                'background:rgba(245,158,11,.15);border-radius:4px;border:1px solid rgba(245,158,11,.35);white-space:nowrap;">'+
+                '✂ 80% · 20% restante abajo</span>'+
+                '<div style="flex:1;border-top:2px dashed rgba(245,158,11,.7);"></div>'+
+                '</div></td></tr>';
+            } else if(!crossed80 && cpct>=80){ crossed80=true; }
+            var isVital = prevCum<80;
+            var rowBg   = isVital?'rgba(5,10,25,.4)':'rgba(20,5,5,.3)';
+            var lColor  = isVital?'var(--txt)':'var(--mut)';
+            var bColor  = isVital?TC[ti]+'77':TC[ti]+'28';
+            return divider+'<tr style="background:'+rowBg+';">'+
+              '<td colspan="'+(1+data.length)+'" style="padding:3px 20px 3px 28px;">'+
+              '<div style="display:flex;align-items:center;gap:8px;">'+
+              '<div style="flex:1;background:rgba(255,255,255,.06);border-radius:3px;height:14px;position:relative;">'+
+              '<div style="width:'+barW+'%;background:'+bColor+';height:100%;border-radius:3px;"></div>'+
+              '<span style="position:absolute;left:6px;top:0;font-size:9px;line-height:14px;color:'+lColor+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 80px);">'+
+              obs_lbl+'</span></div>'+
+              '<span style="font-size:9px;font-weight:'+(isVital?'700':'400')+';color:'+(isVital?TC[ti]:'var(--mut)')+';white-space:nowrap;min-width:36px;text-align:right;">'+pct.toFixed(0)+'%</span>'+
+              '<span style="font-size:9px;color:var(--mut);white-space:nowrap;min-width:70px;text-align:right;">'+Math.round(obs[obs_lbl]).toLocaleString('es-CL')+' min</span>'+
+              '<span style="font-size:9px;font-weight:'+(isVital?'700':'400')+';color:'+(isVital?'#f59e0b':'var(--mut)')+';white-space:nowrap;min-width:48px;text-align:right;">'+cpct.toFixed(0)+'%</span>'+
+              '</div></td></tr>';
+          }).join('');
+          detailRows += paretoRows;
+          detailRows += '<tr style="background:rgba(5,10,25,.3);"><td colspan="'+(1+data.length)+
+            '" style="padding:4px 14px 8px;font-size:9px;color:var(--mut);">'+
+            obsSorted.length+' observaciones · '+Math.round(total).toLocaleString('es-CL')+' min totales</td></tr>';
+        });
+
+        // Toggle button in the causa cell
+        var causaCell = '<td style="padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.04);">'+
+          '<div style="display:flex;align-items:center;gap:6px;">'+
+          '<button onclick="var el=document.getElementById(\''+rowId+'\');'+
+            'if(el){el.style.display=el.style.display===\'none\'?\'\':\'none\';'+
+            'this.textContent=el.style.display===\'none\'?\'▶ Ver obs\':\'▼ Ocultar\';}'+
+          '" style="font-size:9px;padding:2px 7px;border-radius:5px;background:rgba(59,130,246,.2);'+
+          'border:1px solid rgba(59,130,246,.4);color:var(--acc);cursor:pointer;white-space:nowrap;">'+
+          '▶ Ver obs</button>'+
+          '<span style="font-size:12px;font-weight:600;color:var(--txt);">'+causa+'</span>'+
+          '</div></td>';
+
+        var detailSection = detailRows
+          ? '<tr id="'+rowId+'" style="display:none;">'+
+            '<td colspan="'+(1+data.length)+'" style="padding:0;background:rgba(5,10,25,.5);'+
+            'border-bottom:2px solid rgba(255,255,255,.07);">'+
+            '<table style="width:100%;border-collapse:collapse;">'+detailRows+'</table>'+
+            '</td></tr>'
+          : '';
+
+        return '<tr style="background:'+bg+';">'+causaCell+cells+'</tr>'+detailSection;
       }).join('');
 
       html += '<div style="margin-bottom:12px;background:rgba(8,13,28,.9);border:1px solid rgba(255,255,255,.09);'+
               'border-radius:12px;overflow:hidden;">'+
               '<div style="padding:10px 14px;background:'+accent+';border-bottom:1px solid rgba(255,255,255,.07);">'+
-              '<span style="font-size:12px;font-weight:700;color:'+color+';">'+icon+' TP '+label+' — Top 8 Causas</span></div>'+
+              '<span style="font-size:12px;font-weight:700;color:'+color+';">'+icon+' TP '+label+' — Top 8 Causas</span>'+
+              '<span style="font-size:9px;color:var(--mut);margin-left:8px;">▶ Ver obs = Pareto de observaciones</span></div>'+
               '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:280px;">'+
               '<thead><tr><th style="padding:8px 14px;text-align:left;color:var(--mut);font-size:10px;background:rgba(15,25,50,.5);">Causa</th>'+
               hdrs()+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
