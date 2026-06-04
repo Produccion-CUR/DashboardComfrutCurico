@@ -3136,6 +3136,7 @@ const fpTP=function(o){
     return (!o.año||r.año==o.año)&&(!o.mes||r.mes==o.mes)&&
       (!o.sem||r.semana==o.sem)&&(!o.dia||r.dia==o.dia)&&
       (!o.area||r.area===o.area)&&
+      (!o.linea||r.linea===o.linea)&&
       (!o.tipo||r.tipo_paro===o.tipo)&&(!o.turno||String(r.turno)===o.turno);
   });
 };
